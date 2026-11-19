@@ -1,0 +1,3797 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Von Allocator — Budget Allocation for Vhon</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%232563eb'/%3E%3Ctext x='16' y='23' font-family='Inter,Arial,sans-serif' font-size='20' font-weight='800' fill='white' text-anchor='middle'%3EV%3C/text%3E%3C/svg%3E" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    /* Theme Variables: Dark Mode Primary, Light Mode Toggleable */
+    :root {
+      --bg-canvas: #f1f5f9;
+      --bg-surface: #ffffff;
+      --bg-surface-2: #f8fafc;
+      --bg-input: #f1f5f9;
+      --border-subtle: #e2e8f0;
+      --border-strong: #cbd5e1;
+      --text-primary: #0f172a;
+      --text-secondary: #475569;
+      --text-muted: #64748b;
+    }
+
+    html.dark {
+      --bg-canvas: #0c1018;
+      --bg-surface: #151b27;
+      --bg-surface-2: #101520;
+      --bg-input: #111622;
+      --border-subtle: #232c3d;
+      --border-strong: #2f3b52;
+      --text-primary: #f1f5f9;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: var(--bg-canvas);
+      color: var(--text-primary);
+      user-select: none;
+      transition: background-color 0.2s ease, color 0.2s ease;
+    }
+
+    input, textarea, select {
+      user-select: text;
+    }
+
+    .mono-num {
+      font-family: 'JetBrains Mono', monospace;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .app-card {
+      background-color: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      transition: background-color 0.2s ease, border-color 0.2s ease;
+    }
+
+    .app-subcard {
+      background-color: var(--bg-surface-2);
+      border: 1px solid var(--border-subtle);
+    }
+
+    .app-input {
+      background-color: var(--bg-input);
+      border: 1px solid var(--border-strong);
+      color: var(--text-primary);
+    }
+
+    .app-input:focus {
+      outline: none;
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+    }
+
+    .app-divider {
+      border-color: var(--border-subtle);
+    }
+
+    /* Bank & Wallet Pill Badges */
+    .pill-maribank {
+      background-color: rgba(217, 119, 6, 0.16);
+      color: #f59e0b;
+      border: 1px solid rgba(245, 158, 11, 0.35);
+    }
+    html:not(.dark) .pill-maribank {
+      background-color: #fef3c7;
+      color: #b45309;
+      border-color: #fcd34d;
+    }
+
+    .pill-tonik {
+      background-color: rgba(139, 92, 246, 0.16);
+      color: #a78bfa;
+      border: 1px solid rgba(167, 139, 250, 0.35);
+    }
+    html:not(.dark) .pill-tonik {
+      background-color: #ede9fe;
+      color: #6d28d9;
+      border-color: #c4b5fd;
+    }
+
+    .pill-maya {
+      background-color: rgba(16, 185, 129, 0.16);
+      color: #34d399;
+      border: 1px solid rgba(52, 211, 153, 0.35);
+    }
+    html:not(.dark) .pill-maya {
+      background-color: #d1fae5;
+      color: #047857;
+      border-color: #6ee7b7;
+    }
+
+    .pill-gotyme {
+      background-color: rgba(6, 182, 212, 0.16);
+      color: #22d3ee;
+      border: 1px solid rgba(34, 211, 238, 0.35);
+    }
+    html:not(.dark) .pill-gotyme {
+      background-color: #cffafe;
+      color: #0e7490;
+      border-color: #67e8f9;
+    }
+
+    .pill-cimb {
+      background-color: rgba(239, 68, 68, 0.16);
+      color: #f87171;
+      border: 1px solid rgba(248, 113, 113, 0.35);
+    }
+    html:not(.dark) .pill-cimb {
+      background-color: #fee2e2;
+      color: #b91c1c;
+      border-color: #fca5a5;
+    }
+
+    .pill-shopeepay {
+      background-color: rgba(249, 115, 22, 0.16);
+      color: #fb923c;
+      border: 1px solid rgba(251, 146, 60, 0.35);
+    }
+    html:not(.dark) .pill-shopeepay {
+      background-color: #ffedd5;
+      color: #c2410c;
+      border-color: #fdba74;
+    }
+
+    .pill-blue {
+      background-color: rgba(59, 130, 246, 0.16);
+      color: #60a5fa;
+      border: 1px solid rgba(96, 165, 250, 0.35);
+    }
+    html:not(.dark) .pill-blue {
+      background-color: #dbeafe;
+      color: #1d4ed8;
+      border-color: #93c5fd;
+    }
+
+    .pill-pink {
+      background-color: rgba(236, 72, 153, 0.16);
+      color: #f472b6;
+      border: 1px solid rgba(244, 114, 182, 0.35);
+    }
+    html:not(.dark) .pill-pink {
+      background-color: #fce7f3;
+      color: #be185d;
+      border-color: #f9a8d4;
+    }
+
+    .pill-indigo {
+      background-color: rgba(99, 102, 241, 0.16);
+      color: #818cf8;
+      border: 1px solid rgba(129, 140, 248, 0.35);
+    }
+    html:not(.dark) .pill-indigo {
+      background-color: #e0e7ff;
+      color: #4338ca;
+      border-color: #a5b4fc;
+    }
+
+    /* Custom subtle scrollbars */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #334155;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #475569;
+    }
+
+    /* Accordion smooth transition (Collapsed by default) */
+    .accordion-content {
+      display: grid;
+      grid-template-rows: 0fr;
+      transition: grid-template-rows 0.24s ease-out;
+    }
+    .accordion-content.open {
+      grid-template-rows: 1fr;
+    }
+    .accordion-inner {
+      overflow: hidden;
+    }
+
+    #sidebar {
+      transition: width 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* Aesthetic Custom Checkbox */
+    .aesthetic-checkbox {
+      appearance: none;
+      -webkit-appearance: none;
+      width: 18px;
+      height: 18px;
+      border-radius: 6px;
+      border: 1.5px solid var(--border-strong);
+      background-color: var(--bg-input);
+      display: inline-grid;
+      place-content: center;
+      cursor: pointer;
+      transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+      flex-shrink: 0;
+    }
+    .aesthetic-checkbox:hover {
+      border-color: #10b981;
+      box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.14);
+    }
+    .aesthetic-checkbox::before {
+      content: "";
+      width: 10px;
+      height: 10px;
+      transform: scale(0);
+      transition: transform 0.16s cubic-bezier(0.34, 1.56, 0.64, 1);
+      background-color: #ffffff;
+      clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%);
+    }
+    .aesthetic-checkbox:checked {
+      background: linear-gradient(135deg, #10b981, #059669);
+      border-color: #10b981;
+      box-shadow: 0 2px 6px rgba(16, 185, 129, 0.35);
+    }
+    .aesthetic-checkbox:checked::before {
+      transform: scale(1);
+    }
+  </style>
+</head>
+<body class="min-h-screen antialiased">
+
+  <!-- ==================== AUTH VIEW (Clean, No Exposed Credentials) ==================== -->
+  <div id="auth-view" class="min-h-screen flex items-center justify-center p-4 relative">
+    <!-- Top Right Theme Toggle on Auth Screen -->
+    <button type="button" onclick="toggleTheme()" title="Toggle Dark / Light Mode"
+      class="fixed top-5 right-5 p-2.5 rounded-xl app-card text-slate-400 hover:text-blue-400 shadow-lg transition flex items-center gap-2 text-xs font-semibold">
+      <i id="auth-theme-icon" data-lucide="sun" class="w-4 h-4 text-amber-400"></i>
+      <span id="auth-theme-label" class="hidden sm:inline">Light Mode</span>
+    </button>
+
+    <div class="w-full max-w-sm app-card rounded-2xl shadow-2xl overflow-hidden">
+      <div class="p-6 pb-5 border-b app-divider flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-blue-600 text-white shadow-md shadow-blue-600/25 flex items-center justify-center font-extrabold text-lg tracking-tight shrink-0">
+          V
+        </div>
+        <div>
+          <h1 class="text-lg font-bold tracking-tight">Von Allocator</h1>
+          <p class="text-xs" style="color: var(--text-secondary)">Budget Allocation for Vhon</p>
+        </div>
+      </div>
+
+      <!-- Auth Mode Switcher -->
+      <div class="flex border-b app-divider">
+        <button type="button" id="tab-login" onclick="switchAuthTab('login')" class="flex-1 py-3 text-xs font-bold uppercase tracking-wider border-b-2 border-blue-500 text-blue-500 transition">
+          Log In
+        </button>
+        <button type="button" id="tab-signup" onclick="switchAuthTab('signup')" class="flex-1 py-3 text-xs font-bold uppercase tracking-wider border-b-2 border-transparent opacity-60 hover:opacity-100 transition">
+          Sign Up
+        </button>
+      </div>
+
+      <form id="auth-form" onsubmit="handleAuthSubmit(event)" class="p-6 space-y-4">
+        <div id="auth-error" class="hidden p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs font-medium flex items-center gap-2">
+          <i data-lucide="alert-circle" class="w-4 h-4 shrink-0"></i>
+          <span id="auth-error-text">Invalid credentials.</span>
+        </div>
+
+        <div>
+          <label class="block text-[11px] font-semibold uppercase tracking-wider mb-1.5" style="color: var(--text-secondary)">Username</label>
+          <div class="relative">
+            <i data-lucide="user" class="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2"></i>
+            <input id="auth-username" type="text" required autocomplete="username" placeholder="Enter your username"
+              class="w-full pl-10 pr-4 py-2.5 rounded-xl app-input text-sm" />
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-[11px] font-semibold uppercase tracking-wider mb-1.5" style="color: var(--text-secondary)">Password / Passkey</label>
+          <div class="relative">
+            <i data-lucide="key-round" class="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2"></i>
+            <input id="auth-password" type="password" required autocomplete="current-password" placeholder="Enter your passkey"
+              class="w-full pl-10 pr-4 py-2.5 rounded-xl app-input text-sm" />
+          </div>
+        </div>
+
+        <label class="flex items-center gap-2 cursor-pointer select-none pt-0.5">
+          <input id="auth-remember-device" type="checkbox" checked class="aesthetic-checkbox" />
+          <span class="text-xs" style="color: var(--text-secondary)">Stay logged in on this device until I log out</span>
+        </label>
+
+        <button id="auth-submit-btn" type="submit"
+          class="w-full py-2.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-sm shadow-md shadow-blue-600/20 transition flex items-center justify-center gap-2">
+          <span>Log In</span>
+          <i data-lucide="arrow-right" class="w-4 h-4"></i>
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==================== MAIN APP SHELL ==================== -->
+  <div id="app-shell" class="hidden min-h-screen flex">
+
+    <!-- COLLAPSIBLE SIDEBAR (Collapsed by default: w-[68px]) -->
+    <aside id="sidebar" data-collapsed="true" class="w-[68px] app-card border-r border-t-0 border-b-0 border-l-0 flex flex-col justify-between shrink-0 sticky top-0 h-screen z-30">
+      <div>
+        <!-- Brand & Collapse Toggle -->
+        <div class="h-16 px-3.5 flex items-center justify-between border-b app-divider">
+          <div class="flex items-center gap-2.5 overflow-hidden">
+            <div class="w-9 h-9 rounded-xl bg-blue-600 text-white shadow-sm shadow-blue-600/25 flex items-center justify-center font-extrabold text-sm shrink-0">
+              V
+            </div>
+            <div class="sidebar-label hidden whitespace-nowrap">
+              <div class="font-bold text-sm leading-tight">Von Allocator</div>
+              <div class="text-[10px]" style="color: var(--text-secondary)">Budget Allocation for Vhon</div>
+            </div>
+          </div>
+          <button type="button" onclick="toggleSidebar()" title="Expand / Collapse Sidebar"
+            class="w-7 h-7 rounded-lg hover:bg-slate-500/10 text-slate-400 hover:text-blue-400 flex items-center justify-center shrink-0 transition">
+            <i id="sidebar-toggle-icon" data-lucide="panel-left-open" class="w-4 h-4"></i>
+          </button>
+        </div>
+
+        <!-- 3 Navigation Pages: Allocation, Debts, Saved -->
+        <nav class="p-2.5 space-y-1.5 mt-2">
+          <button type="button" onclick="navigateTo('allocation')" id="nav-allocation" title="Allocation"
+            class="nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold bg-blue-600 text-white shadow-sm transition">
+            <i data-lucide="pie-chart" class="w-4 h-4 shrink-0"></i>
+            <span class="sidebar-label hidden whitespace-nowrap">Allocation</span>
+          </button>
+
+          <button type="button" onclick="navigateTo('debts')" id="nav-debts" title="Debts"
+            class="nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold opacity-70 hover:opacity-100 hover:bg-slate-500/10 transition">
+            <i data-lucide="credit-card" class="w-4 h-4 shrink-0"></i>
+            <span class="sidebar-label hidden whitespace-nowrap">Debts</span>
+          </button>
+
+          <button type="button" onclick="navigateTo('saved')" id="nav-saved" title="Saved"
+            class="nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold opacity-70 hover:opacity-100 hover:bg-slate-500/10 transition">
+            <i data-lucide="landmark" class="w-4 h-4 shrink-0"></i>
+            <span class="sidebar-label hidden whitespace-nowrap">Saved</span>
+          </button>
+
+          <button type="button" onclick="navigateTo('setup')" id="nav-setup" title="Setup & Categories"
+            class="nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold opacity-70 hover:opacity-100 hover:bg-slate-500/10 transition">
+            <i data-lucide="sliders-horizontal" class="w-4 h-4 shrink-0"></i>
+            <span class="sidebar-label hidden whitespace-nowrap">Setup</span>
+          </button>
+        </nav>
+      </div>
+
+      <!-- Bottom Firebase Sync & User Controls -->
+      <div class="p-2.5 border-t app-divider space-y-1.5">
+        <button type="button" onclick="manualCloudSync()" title="Connected to Firebase (budget-system-67273) — Click to Sync Now"
+          class="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-medium opacity-80 hover:opacity-100 hover:bg-slate-500/10 transition">
+          <span id="fb-status-dot" class="w-2 h-2 rounded-full bg-emerald-400 shrink-0 ml-1"></span>
+          <span class="sidebar-label hidden whitespace-nowrap truncate" id="fb-status-text">Cloud Synced</span>
+        </button>
+
+        <div class="flex items-center gap-2.5 px-2.5 py-2 rounded-xl app-subcard">
+          <div id="user-avatar" class="w-7 h-7 rounded-lg bg-blue-600 text-white font-bold text-xs flex items-center justify-center uppercase shrink-0">
+            V
+          </div>
+          <div class="sidebar-label hidden overflow-hidden flex-1">
+            <div id="user-display-name" class="text-xs font-semibold truncate">von</div>
+            <div class="text-[10px] text-emerald-400">Online</div>
+          </div>
+        </div>
+
+        <button type="button" onclick="logout()" title="Log Out"
+          class="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-medium text-rose-400 hover:bg-rose-500/10 transition">
+          <i data-lucide="log-out" class="w-4 h-4 shrink-0 ml-0.5"></i>
+          <span class="sidebar-label hidden whitespace-nowrap">Log Out</span>
+        </button>
+      </div>
+    </aside>
+
+    <!-- MAIN CONTENT AREA -->
+    <main class="flex-1 min-w-0 overflow-y-auto">
+      <!-- Top Header Bar with Target Week Calendar Dropdown & Theme Toggle -->
+      <header class="sticky top-0 z-20 app-card border-t-0 border-l-0 border-r-0 px-5 sm:px-6 py-3 flex flex-wrap items-center justify-between gap-3 backdrop-blur-md">
+        <div>
+          <h2 id="page-title" class="text-base font-bold tracking-tight">Weekly Budget Allocation</h2>
+          <p id="page-subtitle" class="text-xs" style="color: var(--text-secondary)">Allocate this week's sahod & allowance to next week's expenses</p>
+        </div>
+
+        <div class="flex items-center gap-2.5">
+          <!-- Interactive Target Week Pill with Mini-Calendar Popup Dropdown -->
+          <div class="relative" id="header-cal-wrapper">
+            <button type="button" onclick="toggleHeaderCalPopover(event)" title="Click to open Paycheck-to-Expense Calendar"
+              class="flex items-center gap-2 px-3 py-1.5 rounded-full app-subcard hover:border-blue-500/50 text-xs transition cursor-pointer">
+              <i data-lucide="calendar-range" class="w-3.5 h-3.5 text-blue-400 shrink-0"></i>
+              <span class="hidden sm:inline" style="color: var(--text-secondary)">Target Week:</span>
+              <strong id="header-target-week" class="font-semibold">Nov 23 – Nov 29, 2026</strong>
+              <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-slate-400"></i>
+            </button>
+
+            <!-- Mini Calendar Popup Dropdown -->
+            <div id="header-cal-popover" onclick="event.stopPropagation()"
+              class="hidden absolute right-0 mt-2 w-[310px] sm:w-[330px] app-card rounded-2xl p-4 shadow-2xl z-50 border border-blue-500/30">
+              <div class="flex items-center justify-between gap-2 mb-2.5">
+                <span class="text-xs font-bold flex items-center gap-1.5">
+                  <i data-lucide="calendar" class="w-3.5 h-3.5 text-blue-400"></i>
+                  <span>Select Sahod Week</span>
+                </span>
+                <div class="flex items-center gap-1 app-subcard p-0.5 rounded-lg">
+                  <button type="button" onclick="changeCalMonth(-1)" class="p-1 rounded hover:bg-slate-500/15 transition">
+                    <i data-lucide="chevron-left" class="w-3.5 h-3.5"></i>
+                  </button>
+                  <span id="mini-cal-month-label" class="px-1.5 text-[11px] font-bold min-w-[96px] text-center">November 2026</span>
+                  <button type="button" onclick="changeCalMonth(1)" class="p-1 rounded hover:bg-slate-500/15 transition">
+                    <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
+                  </button>
+                </div>
+              </div>
+
+              <p class="text-[10px] mb-2" style="color: var(--text-secondary)">
+                <strong>Double-click</strong> or <strong>drag</strong> sahod days &rarr; maps to next week
+              </p>
+
+              <div class="grid grid-cols-7 gap-1 text-center text-[9px] font-bold uppercase tracking-wider mb-1" style="color: var(--text-muted)">
+                <div>M</div><div>T</div><div>W</div><div>T</div><div>F</div><div>S</div><div>S</div>
+              </div>
+
+              <div id="mini-calendar-grid" class="grid grid-cols-7 gap-1"></div>
+
+              <div class="mt-3 pt-2.5 border-t app-divider space-y-1.5 text-[11px]">
+                <div class="flex items-center justify-between">
+                  <span class="text-blue-400 font-semibold">Sahod Window:</span>
+                  <span id="mini-cal-income-range" class="font-bold">Nov 16 – Nov 20, 2026</span>
+                </div>
+                <div class="flex items-center justify-between">
+                  <span class="text-emerald-400 font-semibold">Target Week:</span>
+                  <span id="mini-cal-target-range" class="font-bold">Nov 23 – Nov 29, 2026</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Light / Dark Mode Toggle on Top Right -->
+          <button type="button" onclick="toggleTheme()" title="Switch Light / Dark Mode"
+            class="p-2 rounded-full app-subcard hover:border-blue-500/50 transition flex items-center gap-1.5 text-xs font-semibold">
+            <i id="header-theme-icon" data-lucide="sun" class="w-4 h-4 text-amber-400"></i>
+            <span id="header-theme-label" class="hidden sm:inline pr-1">Light</span>
+          </button>
+        </div>
+      </header>
+
+      <!-- ==================== PAGE 1: ALLOCATION ==================== -->
+      <section id="page-allocation" class="p-5 sm:p-6 max-w-[1400px] mx-auto space-y-5">
+
+        <!-- WEEKLY BUDGET HEALTH BAR -->
+        <div class="app-card rounded-2xl p-4 sm:p-5">
+          <div class="flex flex-wrap items-center justify-between gap-4 mb-3">
+            <div class="flex items-center gap-3">
+              <div id="health-icon-box" class="w-9 h-9 rounded-xl bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 flex items-center justify-center">
+                <i data-lucide="activity" class="w-4 h-4"></i>
+              </div>
+              <div>
+                <div class="flex items-center gap-2">
+                  <h3 class="text-sm font-bold">Weekly Budget Health</h3>
+                  <span id="health-badge" class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                    Healthy
+                  </span>
+                </div>
+                <p id="health-message" class="text-xs mt-0.5" style="color: var(--text-secondary)">
+                  Fixed expenses covered with variable allocation room.
+                </p>
+              </div>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-5 text-right">
+              <div>
+                <div class="text-[10px] uppercase tracking-wider font-semibold" style="color: var(--text-muted)">Total Income</div>
+                <div id="health-total-income" class="text-sm font-bold text-blue-400 mono-num">₱1,300.00</div>
+              </div>
+              <div>
+                <div class="text-[10px] uppercase tracking-wider font-semibold" style="color: var(--text-muted)">Fixed Bills</div>
+                <div id="health-total-fixed" class="text-sm font-bold text-rose-400 mono-num">₱1,191.58</div>
+              </div>
+              <div>
+                <div class="text-[10px] uppercase tracking-wider font-semibold" style="color: var(--text-muted)">Variable Pool</div>
+                <div id="health-variable-pool" class="text-sm font-bold text-emerald-400 mono-num">₱108.42</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="w-full h-2.5 rounded-full overflow-hidden flex app-subcard">
+            <div id="bar-fixed" class="bg-rose-500 h-full transition-all duration-300" style="width: 60%"></div>
+            <div id="bar-variable" class="bg-emerald-500 h-full transition-all duration-300" style="width: 40%"></div>
+            <div id="bar-deficit" class="bg-amber-500 h-full transition-all duration-300" style="width: 0%"></div>
+          </div>
+          <div class="flex items-center justify-between text-[11px] mt-2" style="color: var(--text-secondary)">
+            <div class="flex items-center gap-4">
+              <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-rose-500 inline-block"></span> Fixed (<span id="pct-fixed">0%</span>)</span>
+              <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-emerald-500 inline-block"></span> Variable (<span id="pct-variable">0%</span>)</span>
+            </div>
+            <span id="health-ratio-label" class="font-medium mono-num">100% Allocated</span>
+          </div>
+        </div>
+
+        <!-- TOP ROW: CALENDAR (7 cols) + BASE WEEKLY INCOME (5 cols) -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+
+          <!-- PAYCHECK-TO-EXPENSE CALENDAR (7 cols) -->
+          <div class="lg:col-span-7 app-card rounded-2xl p-5 flex flex-col justify-between">
+            <div>
+              <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+                <div>
+                  <h3 class="text-sm font-bold flex items-center gap-2">
+                    <span class="w-7 h-7 rounded-lg bg-blue-500/15 text-blue-400 flex items-center justify-center">
+                      <i data-lucide="calendar" class="w-4 h-4"></i>
+                    </span>
+                    <span>Paycheck-to-Expense Calendar</span>
+                  </h3>
+                  <p class="text-[11px] mt-1" style="color: var(--text-secondary)">
+                    <strong>Single-click</strong> date &bull; <strong>Double-click</strong> or <strong>Drag</strong> to select sahod week &rarr; maps to next week
+                  </p>
+                </div>
+                <div class="flex items-center gap-1 app-subcard p-1 rounded-xl">
+                  <button type="button" onclick="changeCalMonth(-1)" class="p-1.5 rounded-lg hover:bg-slate-500/15 transition">
+                    <i data-lucide="chevron-left" class="w-3.5 h-3.5"></i>
+                  </button>
+                  <span id="cal-month-label" class="px-2 text-xs font-bold min-w-[110px] text-center">November 2026</span>
+                  <button type="button" onclick="changeCalMonth(1)" class="p-1.5 rounded-lg hover:bg-slate-500/15 transition">
+                    <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
+                  </button>
+                </div>
+              </div>
+
+              <div class="grid grid-cols-7 gap-1 text-center text-[10px] font-bold uppercase tracking-wider mb-1.5" style="color: var(--text-muted)">
+                <div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div><div>Sun</div>
+              </div>
+
+              <div id="calendar-grid" class="grid grid-cols-7 gap-1"></div>
+            </div>
+
+            <div class="mt-4 pt-3.5 border-t app-divider grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              <div class="p-2.5 rounded-xl bg-blue-500/10 border border-blue-500/25">
+                <div class="text-[10px] font-bold uppercase tracking-wider text-blue-400 flex items-center justify-between">
+                  <span>1. Sahod Window</span>
+                  <span id="cal-selected-date-pill" class="px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-300 text-[10px]">Nov 16</span>
+                </div>
+                <div id="cal-income-range-text" class="text-xs font-bold mt-1">Nov 16 – Nov 20, 2026</div>
+              </div>
+              <div class="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/25">
+                <div class="text-[10px] font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-1">
+                  <i data-lucide="arrow-right-circle" class="w-3 h-3"></i>
+                  <span>2. Next Week Budget</span>
+                </div>
+                <div id="cal-target-range-text" class="text-xs font-bold mt-1">Nov 23 – Nov 29, 2026</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- BASE WEEKLY INCOME CARD (Quick Click Source Buttons + Single Editable Numbox + Saved Week Switcher) -->
+          <div class="lg:col-span-5 app-card rounded-2xl p-5 flex flex-col justify-between">
+            <div>
+              <div class="flex items-center justify-between gap-2 mb-3">
+                <div class="flex items-center gap-2.5">
+                  <div class="w-8 h-8 rounded-lg bg-blue-500/15 text-blue-400 flex items-center justify-center">
+                    <i data-lucide="trending-up" class="w-4 h-4"></i>
+                  </div>
+                  <div>
+                    <h3 class="text-sm font-bold">Base Weekly Income</h3>
+                    <p class="text-[11px]" style="color: var(--text-secondary)">Click sources to toggle or edit the amount below</p>
+                  </div>
+                </div>
+                <span id="allocation-week-status-badge" class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                  Saved Week
+                </span>
+              </div>
+
+              <!-- Quick Saved Weeks Switcher Bar -->
+              <div id="allocation-saved-weeks-bar" class="mb-3.5 flex items-center gap-1.5 overflow-x-auto pb-1">
+                <!-- Populated via JS -->
+              </div>
+
+              <!-- Clickable Income Preset Buttons -->
+              <div class="grid grid-cols-3 gap-2 mb-4">
+                <button type="button" id="btn-src-allowance" onclick="toggleIncomePreset('allowance')"
+                  class="p-2.5 rounded-xl border text-left transition flex flex-col justify-between">
+                  <div class="flex items-center justify-between w-full mb-1">
+                    <span class="text-[11px] font-bold">Allowance</span>
+                    <span id="badge-src-allowance" class="w-2 h-2 rounded-full bg-slate-500"></span>
+                  </div>
+                  <div class="text-xs font-extrabold mono-num text-blue-400">₱1,200</div>
+                  <div class="text-[9px]" style="color: var(--text-muted)">Every 2 wks</div>
+                </button>
+
+                <button type="button" id="btn-src-kuya" onclick="toggleIncomePreset('kuya')"
+                  class="p-2.5 rounded-xl border text-left transition flex flex-col justify-between">
+                  <div class="flex items-center justify-between w-full mb-1">
+                    <span class="text-[11px] font-bold">Kuya Work</span>
+                    <span id="badge-src-kuya" class="w-2 h-2 rounded-full bg-blue-400"></span>
+                  </div>
+                  <div class="text-xs font-extrabold mono-num text-blue-400">₱800</div>
+                  <div class="text-[9px]" style="color: var(--text-muted)">Weekly</div>
+                </button>
+
+                <button type="button" id="btn-src-sprout" onclick="toggleIncomePreset('sprout')"
+                  class="p-2.5 rounded-xl border text-left transition flex flex-col justify-between">
+                  <div class="flex items-center justify-between w-full mb-1">
+                    <span class="text-[11px] font-bold">Sprout</span>
+                    <span id="badge-src-sprout" class="w-2 h-2 rounded-full bg-blue-400"></span>
+                  </div>
+                  <div class="text-xs font-extrabold mono-num text-blue-400">₱500</div>
+                  <div class="text-[9px]" style="color: var(--text-muted)">Weekly</div>
+                </button>
+              </div>
+
+              <!-- Single Editable Numbox for Custom / Adjusted Base Income -->
+              <div>
+                <label class="block text-[10px] font-bold uppercase tracking-wider mb-1.5" style="color: var(--text-secondary)">
+                  Weekly Base Amount (Editable)
+                </label>
+                <div class="relative">
+                  <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-500">₱</span>
+                  <input id="base-income-single-input" type="text" value="1300"
+                    oninput="handleSingleBaseIncomeInput()"
+                    onblur="finalizeSingleBaseIncomeInput()"
+                    onkeydown="if(event.key==='Enter'){this.blur();}"
+                    placeholder="0"
+                    class="w-full pl-8 pr-4 py-2.5 rounded-xl app-input text-base font-extrabold mono-num" />
+                </div>
+              </div>
+            </div>
+
+            <div class="mt-5 pt-3.5 border-t app-divider flex items-center justify-between">
+              <span class="text-sm font-bold">Total Base Income</span>
+              <span id="base-income-total-display" class="text-base font-extrabold text-blue-500 mono-num">₱1,300.00</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- BOTTOM ROW: 1/3 FIXED WEEKLY EXPENSES | 1/3 WEEKLY VARIABLE ALLOCATION | 1/3 EXTRA INCOME ALLOCATION -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-5 items-stretch">
+
+          <!-- PANEL 1 (1/3): FIXED WEEKLY EXPENSES -->
+          <div class="app-card rounded-2xl p-5 flex flex-col justify-between">
+            <div>
+              <div class="flex items-center justify-between gap-2 mb-3.5">
+                <div class="flex items-center gap-2.5">
+                  <div class="w-8 h-8 rounded-lg bg-rose-500/15 text-rose-400 flex items-center justify-center shrink-0">
+                    <i data-lucide="receipt" class="w-4 h-4"></i>
+                  </div>
+                  <div>
+                    <h3 class="text-sm font-bold">Fixed Weekly Expenses</h3>
+                    <p class="text-[11px]" style="color: var(--text-secondary)">Lock icon prevents accidental edits</p>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Recurring Fixed Items List -->
+              <div id="fixed-expenses-list" class="divide-y app-divider">
+                <!-- Rendered via JS -->
+              </div>
+
+              <!-- Double Divider + Debt Rows (SPaylater & SLoan — Priority #1) -->
+              <div class="mt-2 pt-2 border-t-2 app-divider divide-y app-divider">
+                <div class="pb-1.5 flex items-center justify-between">
+                  <span class="text-[10px] font-bold uppercase tracking-wider text-amber-400 flex items-center gap-1">
+                    <i data-lucide="shield-alert" class="w-3 h-3"></i>
+                    <span>Priority #1: Settle Debts First</span>
+                  </span>
+                </div>
+
+                <!-- SPaylater Row -->
+                <div class="py-2.5 flex items-center justify-between gap-2">
+                  <div class="min-w-0">
+                    <div class="text-xs font-semibold text-amber-400 truncate" id="spaylater-row-label">
+                      SPaylater (₱735 ÷ 2w)
+                    </div>
+                    <span id="spaylater-bank-pill" class="inline-block mt-0.5 px-2 py-0.2 rounded text-[10px] font-semibold pill-shopeepay">ShopeePay</span>
+                  </div>
+                  <div class="flex items-center gap-1.5 shrink-0">
+                    <button type="button" id="lock-btn-spaylater" onclick="toggleDebtRowLock('spaylater')" title="Lock / Unlock amount"
+                      class="p-1.5 rounded-lg app-subcard text-slate-400 hover:text-amber-400 transition">
+                      <i data-lucide="unlock" class="w-3.5 h-3.5"></i>
+                    </button>
+                    <div class="relative w-20">
+                      <span class="absolute left-2 top-1/2 -translate-y-1/2 text-[11px] font-bold text-amber-400">₱</span>
+                      <input id="fixed-spaylater" type="text" value="367.50"
+                        oninput="handleDebtInputOverride('spaylater', this.value)"
+                        placeholder="0"
+                        class="w-full pl-5 pr-1.5 py-1 rounded-lg app-input text-right text-xs font-bold text-amber-400 mono-num disabled:opacity-60" />
+                    </div>
+                  </div>
+                </div>
+
+                <!-- SLoan Row -->
+                <div class="py-2.5 flex items-center justify-between gap-2">
+                  <div class="min-w-0">
+                    <div class="text-xs font-semibold text-amber-400 truncate" id="sloan-row-label">
+                      SLoan
+                    </div>
+                    <span id="sloan-bank-pill" class="inline-block mt-0.5 px-2 py-0.2 rounded text-[10px] font-semibold pill-shopeepay">ShopeePay</span>
+                  </div>
+                  <div class="flex items-center gap-1.5 shrink-0">
+                    <button type="button" id="lock-btn-sloan" onclick="toggleDebtRowLock('sloan')" title="Lock / Unlock amount"
+                      class="p-1.5 rounded-lg app-subcard text-slate-400 hover:text-amber-400 transition">
+                      <i data-lucide="unlock" class="w-3.5 h-3.5"></i>
+                    </button>
+                    <div class="relative w-20">
+                      <span class="absolute left-2 top-1/2 -translate-y-1/2 text-[11px] font-bold text-amber-400">₱</span>
+                      <input id="fixed-sloan" type="text" value="0.00"
+                        oninput="handleDebtInputOverride('sloan', this.value)"
+                        placeholder="0"
+                        class="w-full pl-5 pr-1.5 py-1 rounded-lg app-input text-right text-xs font-bold text-amber-400 mono-num disabled:opacity-60" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Total Fixed Expenses Footer -->
+            <div class="mt-3 pt-3.5 border-t app-divider flex items-center justify-between">
+              <span class="text-xs sm:text-sm font-bold">Total Fixed Expenses</span>
+              <span id="fixed-expenses-total" class="text-sm sm:text-base font-extrabold text-rose-500 mono-num">₱1,191.58</span>
+            </div>
+          </div>
+
+          <!-- PANEL 2 (1/3): WEEKLY VARIABLE ALLOCATION -->
+          <div class="app-card rounded-2xl p-5 flex flex-col justify-between">
+            <div>
+              <div class="mb-3.5">
+                <h3 class="text-sm font-bold">Weekly Variable Allocation</h3>
+                <p class="text-[11px] mt-0.5" style="color: var(--text-secondary)">Distributed from base income after fixed bills</p>
+              </div>
+
+              <!-- Inner Callout Box: Available to Allocate -->
+              <div class="p-3 rounded-xl app-subcard flex items-center justify-between mb-4">
+                <span class="text-xs font-medium" style="color: var(--text-secondary)">Available to Allocate</span>
+                <span id="var-remaining-base" class="text-sm font-extrabold text-emerald-400 mono-num">₱108.42</span>
+              </div>
+
+              <!-- 6 Variable Category Rows -->
+              <div id="variable-allocation-list" class="space-y-3">
+                <!-- Rendered via JS -->
+              </div>
+            </div>
+
+            <div class="mt-4 pt-3.5 border-t app-divider flex items-center justify-between text-xs">
+              <span style="color: var(--text-secondary)">Total Variable Split</span>
+              <span class="font-bold text-emerald-400">100% Allocated</span>
+            </div>
+          </div>
+
+          <!-- PANEL 3 (1/3): EXTRA INCOME ALLOCATION -->
+          <div class="app-card rounded-2xl p-5 flex flex-col justify-between">
+            <div>
+              <div class="flex items-center gap-2.5 mb-3.5">
+                <div class="w-8 h-8 rounded-lg bg-emerald-500/15 text-emerald-400 flex items-center justify-center shrink-0">
+                  <i data-lucide="banknote" class="w-4 h-4"></i>
+                </div>
+                <div>
+                  <h3 class="text-sm font-bold">Extra Income Allocation</h3>
+                  <p class="text-[11px]" style="color: var(--text-secondary)">Side hustle, bonuses & extra cash</p>
+                </div>
+              </div>
+
+              <div class="mb-3.5">
+                <label class="block text-[10px] font-bold uppercase tracking-wider mb-1.5" style="color: var(--text-secondary)">
+                  Extra Income Amount
+                </label>
+                <div class="relative">
+                  <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-500">₱</span>
+                  <input id="extra-income-input" type="text" value=""
+                    oninput="handleExtraIncomeInput()"
+                    onblur="finalizeExtraIncomeInput()"
+                    onkeydown="if(event.key==='Enter'){this.blur();}"
+                    placeholder="0"
+                    class="w-full pl-8 pr-4 py-2 rounded-xl app-input text-xs sm:text-sm font-bold mono-num" />
+                </div>
+              </div>
+
+              <div class="pt-3 border-t app-divider">
+                <div class="text-[10px] font-bold uppercase tracking-wider mb-2.5" style="color: var(--text-secondary)">
+                  Extra Breakdown & Wallets
+                </div>
+                <div id="extra-allocation-list" class="space-y-2.5">
+                  <!-- Rendered via JS -->
+                </div>
+              </div>
+            </div>
+
+            <div class="mt-4 pt-3.5 border-t app-divider flex items-center justify-between text-xs">
+              <span style="color: var(--text-secondary)">Extra Pool Total</span>
+              <span id="extra-pool-footer-total" class="font-extrabold text-emerald-400 mono-num">₱0.00</span>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ==================== PAGE 2: DEBTS (1/3 ADD IN ADVANCE | 1/3 SPAYLATER | 1/3 SLOAN) ==================== -->
+      <section id="page-debts" class="hidden p-5 sm:p-6 max-w-[1400px] mx-auto">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-5 items-start">
+
+          <!-- LEFT 1/3 PANEL: ADD DEBTS IN ADVANCE -->
+          <div class="app-card rounded-2xl p-5 space-y-4">
+            <div class="flex items-center gap-2.5">
+              <div class="w-8 h-8 rounded-lg bg-blue-500/15 text-blue-400 flex items-center justify-center shrink-0">
+                <i data-lucide="plus-circle" class="w-4 h-4"></i>
+              </div>
+              <div>
+                <h3 class="text-sm font-bold">Add Debt in Advance</h3>
+                <p class="text-[11px]" style="color: var(--text-secondary)">Pre-stage upcoming bills before locking</p>
+              </div>
+            </div>
+
+            <form onsubmit="handleAddAdvanceDebt(event)" class="space-y-3">
+              <div class="grid grid-cols-2 gap-2.5">
+                <div>
+                  <label class="block text-[10px] font-bold uppercase tracking-wider mb-1" style="color: var(--text-secondary)">Platform</label>
+                  <select id="new-debt-provider" onchange="updateNewDebtPreview()"
+                    class="w-full px-3 py-2 rounded-xl app-input text-xs font-bold">
+                    <option value="SPaylater">SPaylater</option>
+                    <option value="SLoan">SLoan</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-[10px] font-bold uppercase tracking-wider mb-1" style="color: var(--text-secondary)">Label</label>
+                  <input id="new-debt-label" type="text" placeholder="e.g. Dec Bill"
+                    class="w-full px-3 py-2 rounded-xl app-input text-xs font-semibold" />
+                </div>
+              </div>
+
+              <div class="grid grid-cols-2 gap-2.5">
+                <div>
+                  <label class="block text-[10px] font-bold uppercase tracking-wider mb-1" style="color: var(--text-secondary)">Total Bill</label>
+                  <div class="relative">
+                    <span class="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-slate-500">₱</span>
+                    <input id="new-debt-total" type="text" value="" placeholder="0"
+                      oninput="updateNewDebtPreview()"
+                      class="w-full pl-7 pr-3 py-2 rounded-xl app-input text-xs font-bold mono-num" />
+                  </div>
+                </div>
+                <div>
+                  <label class="block text-[10px] font-bold uppercase tracking-wider mb-1" style="color: var(--text-secondary)">Cash Saved</label>
+                  <div class="relative">
+                    <span class="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-slate-500">₱</span>
+                    <input id="new-debt-saved" type="text" value="" placeholder="0"
+                      oninput="updateNewDebtPreview()"
+                      class="w-full pl-7 pr-3 py-2 rounded-xl app-input text-xs font-bold text-emerald-400 mono-num" />
+                  </div>
+                </div>
+              </div>
+
+              <div class="grid grid-cols-2 gap-2.5">
+                <div>
+                  <label class="block text-[10px] font-bold uppercase tracking-wider mb-1" style="color: var(--text-secondary)">Start Date</label>
+                  <input id="new-debt-start" type="date" value="2026-11-16"
+                    onchange="updateNewDebtPreview()"
+                    class="w-full px-2.5 py-2 rounded-xl app-input text-xs font-semibold" />
+                </div>
+                <div>
+                  <label class="block text-[10px] font-bold uppercase tracking-wider mb-1" style="color: var(--text-secondary)">Due Date</label>
+                  <input id="new-debt-due" type="date" value="2026-12-05"
+                    onchange="updateNewDebtPreview()"
+                    class="w-full px-2.5 py-2 rounded-xl app-input text-xs font-semibold" />
+                </div>
+              </div>
+
+              <!-- Live Weekly Split Preview -->
+              <div class="p-3 rounded-xl app-subcard flex items-center justify-between text-xs">
+                <span id="new-debt-preview-desc" style="color: var(--text-secondary)">Deficit ₱0 ÷ 2 wks</span>
+                <span id="new-debt-preview-weekly" class="font-extrabold text-amber-400 mono-num">₱0.00/wk</span>
+              </div>
+
+              <div class="grid grid-cols-2 gap-2 pt-1">
+                <button type="button" onclick="submitAdvanceDebt(false)"
+                  class="py-2 px-3 rounded-xl app-subcard hover:border-blue-500/40 text-xs font-semibold transition">
+                  Save in Advance
+                </button>
+                <button type="button" onclick="submitAdvanceDebt(true)"
+                  class="py-2 px-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow-sm transition flex items-center justify-center gap-1.5">
+                  <i data-lucide="lock" class="w-3.5 h-3.5"></i>
+                  <span>Add & Lock</span>
+                </button>
+              </div>
+            </form>
+          </div>
+
+          <!-- MIDDLE 1/3 PANEL: SPAYLATER (LOCKED + COLLAPSED STAGED BY DUE DATE) -->
+          <div class="app-card rounded-2xl p-5 space-y-4">
+            <div class="flex items-center justify-between gap-2 pb-3 border-b app-divider">
+              <div class="flex items-center gap-2">
+                <span class="px-2.5 py-1 rounded-md text-xs font-bold pill-shopeepay">SPaylater</span>
+                <span class="text-xs font-semibold" style="color: var(--text-secondary)">Bills</span>
+              </div>
+              <div class="text-right">
+                <span id="spaylater-panel-total" class="text-sm font-extrabold text-amber-400 mono-num">₱367.50/wk</span>
+              </div>
+            </div>
+
+            <!-- Locked SPaylater Debts -->
+            <div class="space-y-2.5">
+              <div class="flex items-center justify-between">
+                <span class="text-[10px] font-bold uppercase tracking-wider" style="color: var(--text-secondary)">Locked in Budget</span>
+                <span id="spaylater-locked-count" class="px-1.5 py-0.5 rounded app-subcard text-[10px] font-bold">0</span>
+              </div>
+              <div id="debts-spaylater-list" class="space-y-2.5">
+                <!-- Rendered via JS -->
+              </div>
+            </div>
+
+            <!-- Staged / Unlocked SPaylater Debts (Collapsed by default, sorted near -> far due date) -->
+            <div class="pt-3 border-t app-divider space-y-2">
+              <div class="flex items-center justify-between">
+                <span class="text-[10px] font-bold uppercase tracking-wider" style="color: var(--text-secondary)">Staged / Unlocked</span>
+                <div class="flex items-center gap-1.5">
+                  <span class="text-[10px]" style="color: var(--text-muted)">Near &rarr; Far Due</span>
+                  <span id="spaylater-staged-count" class="px-1.5 py-0.5 rounded-full app-subcard text-[10px] font-bold">0</span>
+                </div>
+              </div>
+              <div id="debts-spaylater-staged-list" class="space-y-2">
+                <!-- Rendered via JS -->
+              </div>
+            </div>
+          </div>
+
+          <!-- RIGHT 1/3 PANEL: SLOAN (LOCKED + COLLAPSED STAGED BY DUE DATE) -->
+          <div class="app-card rounded-2xl p-5 space-y-4">
+            <div class="flex items-center justify-between gap-2 pb-3 border-b app-divider">
+              <div class="flex items-center gap-2">
+                <span class="px-2.5 py-1 rounded-md text-xs font-bold pill-shopeepay">SLoan</span>
+                <span class="text-xs font-semibold" style="color: var(--text-secondary)">Bills</span>
+              </div>
+              <div class="text-right">
+                <span id="sloan-panel-total" class="text-sm font-extrabold text-amber-400 mono-num">₱0.00/wk</span>
+              </div>
+            </div>
+
+            <!-- Locked SLoan Debts -->
+            <div class="space-y-2.5">
+              <div class="flex items-center justify-between">
+                <span class="text-[10px] font-bold uppercase tracking-wider" style="color: var(--text-secondary)">Locked in Budget</span>
+                <span id="sloan-locked-count" class="px-1.5 py-0.5 rounded app-subcard text-[10px] font-bold">0</span>
+              </div>
+              <div id="debts-sloan-list" class="space-y-2.5">
+                <!-- Rendered via JS -->
+              </div>
+            </div>
+
+            <!-- Staged / Unlocked SLoan Debts (Collapsed by default, sorted near -> far due date) -->
+            <div class="pt-3 border-t app-divider space-y-2">
+              <div class="flex items-center justify-between">
+                <span class="text-[10px] font-bold uppercase tracking-wider" style="color: var(--text-secondary)">Staged / Unlocked</span>
+                <div class="flex items-center gap-1.5">
+                  <span class="text-[10px]" style="color: var(--text-muted)">Near &rarr; Far Due</span>
+                  <span id="sloan-staged-count" class="px-1.5 py-0.5 rounded-full app-subcard text-[10px] font-bold">0</span>
+                </div>
+              </div>
+              <div id="debts-sloan-staged-list" class="space-y-2">
+                <!-- Rendered via JS -->
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ==================== PAGE 3: SAVED (TOTAL ALLOCATION PER BANK — COLLAPSIBLE CARDS) ==================== -->
+      <section id="page-saved" class="hidden p-5 sm:p-6 max-w-6xl mx-auto space-y-5">
+        <div class="app-card rounded-2xl p-5 space-y-5">
+          <!-- Top Header Row -->
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <div class="flex flex-wrap items-center gap-3">
+              <div class="w-8 h-8 rounded-lg bg-slate-500/15 text-slate-300 flex items-center justify-center">
+                <i data-lucide="landmark" class="w-4 h-4"></i>
+              </div>
+              <h3 class="text-base font-bold">Total Allocation per Bank</h3>
+
+              <!-- Week Selector Pill -->
+              <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-blue-500/15 border border-blue-500/30 text-blue-400 text-xs font-semibold">
+                <i data-lucide="calendar" class="w-3.5 h-3.5"></i>
+                <select id="saved-week-selector" onchange="onSavedWeekSelectorChange()"
+                  class="bg-transparent focus:outline-none cursor-pointer font-semibold">
+                  <!-- Populated via JS -->
+                </select>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-2.5">
+              <button type="button" onclick="loadSelectedSavedWeekToAllocation()"
+                class="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold transition flex items-center gap-1.5">
+                <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
+                <span>Edit in Allocation</span>
+              </button>
+
+              <button type="button" onclick="toggleAllBankCards()" id="toggle-all-banks-btn"
+                class="px-3 py-1.5 rounded-lg app-subcard hover:border-blue-500/40 text-xs font-semibold transition">
+                Expand All
+              </button>
+
+              <!-- Total Pill Badge -->
+              <div class="px-3.5 py-1.5 rounded-xl app-subcard flex items-center gap-2 text-xs">
+                <span class="font-bold tracking-wider uppercase" style="color: var(--text-secondary)">TOTAL:</span>
+                <span id="saved-grand-total" class="text-sm font-extrabold text-emerald-400 mono-num">₱1,300.00</span>
+              </div>
+            </div>
+          </div>
+
+          <p class="text-xs" style="color: var(--text-secondary)">
+            Check off each bank on the left once transferred, or click any bank card to expand its itemized breakdown.
+          </p>
+
+          <!-- 3-Column Grid of Collapsible Bank Cards -->
+          <div id="bank-cards-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-start">
+            <!-- Rendered via JS -->
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================== PAGE 4: SETUP (BANKS, FIXED, VARIABLE % & DEBT-FIRST PRIORITY) ==================== -->
+      <section id="page-setup" class="hidden p-5 sm:p-6 max-w-[1400px] mx-auto space-y-5">
+
+        <!-- DEBT-FIRST PRIORITY ORDER BANNER -->
+        <div class="app-card rounded-2xl p-4 sm:p-5 border-l-4 border-l-amber-500">
+          <div class="flex flex-wrap items-center justify-between gap-4">
+            <div class="flex items-start gap-3">
+              <div class="w-9 h-9 rounded-xl bg-amber-500/15 text-amber-400 border border-amber-500/30 flex items-center justify-center shrink-0 mt-0.5">
+                <i data-lucide="shield-alert" class="w-4 h-4"></i>
+              </div>
+              <div>
+                <div class="flex flex-wrap items-center gap-2">
+                  <h3 class="text-sm font-bold">Debt-First Allocation Priority</h3>
+                  <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-400 border border-amber-500/30">
+                    Always Settled First
+                  </span>
+                </div>
+                <p class="text-xs mt-1" style="color: var(--text-secondary)">
+                  Your weekly base income is always allocated in strict priority order:
+                  <strong class="text-amber-400">1st Active Debts (SPaylater &amp; SLoan)</strong> &rarr;
+                  <strong class="text-rose-400">2nd Fixed Weekly Expenses</strong> &rarr;
+                  <strong class="text-emerald-400">3rd Variable Expenses (%)</strong> from whatever remains.
+                </p>
+              </div>
+            </div>
+
+            <!-- Live Priority Waterfall Summary + Debt Bank Selector -->
+            <div class="flex flex-wrap items-center gap-3">
+              <div class="px-3 py-2 rounded-xl app-subcard text-xs">
+                <div class="text-[10px] uppercase font-bold text-amber-400">1st: Debts</div>
+                <div id="setup-priority-debt-amt" class="font-extrabold mono-num">₱367.50</div>
+              </div>
+              <div class="px-3 py-2 rounded-xl app-subcard text-xs">
+                <div class="text-[10px] uppercase font-bold text-rose-400">2nd: Fixed</div>
+                <div id="setup-priority-fixed-amt" class="font-extrabold mono-num">₱824.08</div>
+              </div>
+              <div class="px-3 py-2 rounded-xl app-subcard text-xs">
+                <div class="text-[10px] uppercase font-bold text-emerald-400">3rd: Variable Pool</div>
+                <div id="setup-priority-var-amt" class="font-extrabold mono-num text-emerald-400">₱108.42</div>
+              </div>
+              <div class="px-3 py-2 rounded-xl app-subcard text-xs">
+                <label class="block text-[10px] uppercase font-bold mb-0.5" style="color: var(--text-muted)">Debt Wallet</label>
+                <select id="setup-debt-bank-select" onchange="updateDebtAssignedBank(this.value)"
+                  class="bg-transparent font-bold text-amber-400 focus:outline-none cursor-pointer">
+                  <!-- Populated via JS -->
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- BANKS & WALLETS MANAGER -->
+        <div class="app-card rounded-2xl p-5 space-y-4">
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <div class="flex items-center gap-2.5">
+              <div class="w-8 h-8 rounded-lg bg-blue-500/15 text-blue-400 flex items-center justify-center shrink-0">
+                <i data-lucide="wallet" class="w-4 h-4"></i>
+              </div>
+              <div>
+                <h3 class="text-sm font-bold">My Banks &amp; E-Wallets</h3>
+                <p class="text-[11px]" style="color: var(--text-secondary)">Add or manage the banks/wallets available when assigning fixed &amp; variable expenses</p>
+              </div>
+            </div>
+
+            <!-- Add New Bank Form -->
+            <form onsubmit="addCustomBank(event)" class="flex flex-wrap items-center gap-2">
+              <input id="setup-new-bank-name" type="text" required placeholder="New bank/wallet (e.g. GCash, BPI)"
+                class="px-3 py-1.5 rounded-xl app-input text-xs font-semibold w-48 sm:w-56" />
+              <select id="setup-new-bank-color" class="px-2.5 py-1.5 rounded-xl app-input text-xs font-semibold">
+                <option value="pill-blue">Blue</option>
+                <option value="pill-emerald">Emerald</option>
+                <option value="pill-maribank">Amber</option>
+                <option value="pill-tonik">Violet</option>
+                <option value="pill-gotyme">Cyan</option>
+                <option value="pill-cimb">Rose</option>
+                <option value="pill-shopeepay">Orange</option>
+                <option value="pill-pink">Pink</option>
+                <option value="pill-indigo">Indigo</option>
+              </select>
+              <button type="submit"
+                class="px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow-sm transition flex items-center gap-1.5">
+                <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                <span>Add Bank</span>
+              </button>
+            </form>
+          </div>
+
+          <div id="setup-banks-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5">
+            <!-- Rendered via JS -->
+          </div>
+        </div>
+
+        <!-- 2-COLUMN GRID: FIXED WEEKLY EXPENSES (LEFT) & VARIABLE EXPENSES % (RIGHT) -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+
+          <!-- LEFT (7 cols): FIXED WEEKLY EXPENSES EDITOR -->
+          <div class="lg:col-span-7 app-card rounded-2xl p-5 space-y-4">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <div class="flex items-center gap-2.5">
+                <div class="w-8 h-8 rounded-lg bg-rose-500/15 text-rose-400 flex items-center justify-center shrink-0">
+                  <i data-lucide="receipt" class="w-4 h-4"></i>
+                </div>
+                <div>
+                  <h3 class="text-sm font-bold">Fixed Weekly Expenses (Priority #2)</h3>
+                  <p class="text-[11px]" style="color: var(--text-secondary)">Edit names, billing cycle notes, weekly amounts, and assigned banks</p>
+                </div>
+              </div>
+              <div class="px-3 py-1 rounded-xl app-subcard text-xs font-bold">
+                <span style="color: var(--text-secondary)">Recurring Total: </span>
+                <span id="setup-fixed-subtotal" class="text-rose-400 mono-num">₱824.08</span>
+              </div>
+            </div>
+
+            <!-- Add New Fixed Expense Form -->
+            <form onsubmit="addCustomFixedExpense(event)" class="p-3 rounded-xl app-subcard grid grid-cols-1 sm:grid-cols-12 gap-2 items-end">
+              <div class="sm:col-span-4">
+                <label class="block text-[10px] font-bold uppercase tracking-wider mb-1" style="color: var(--text-muted)">Expense Name</label>
+                <input id="setup-new-fixed-name" type="text" required placeholder="e.g. Gym, Netflix"
+                  class="w-full px-2.5 py-1.5 rounded-lg app-input text-xs font-semibold" />
+              </div>
+              <div class="sm:col-span-3">
+                <label class="block text-[10px] font-bold uppercase tracking-wider mb-1" style="color: var(--text-muted)">Cycle Note</label>
+                <input id="setup-new-fixed-cycle" type="text" placeholder="e.g. 500/mo"
+                  class="w-full px-2.5 py-1.5 rounded-lg app-input text-xs" />
+              </div>
+              <div class="sm:col-span-2">
+                <label class="block text-[10px] font-bold uppercase tracking-wider mb-1" style="color: var(--text-muted)">Weekly ₱</label>
+                <input id="setup-new-fixed-amount" type="text" required placeholder="0"
+                  class="w-full px-2.5 py-1.5 rounded-lg app-input text-xs font-bold mono-num" />
+              </div>
+              <div class="sm:col-span-3 flex items-center gap-1.5">
+                <div class="flex-1 min-w-0">
+                  <label class="block text-[10px] font-bold uppercase tracking-wider mb-1" style="color: var(--text-muted)">Bank</label>
+                  <select id="setup-new-fixed-bank" class="w-full px-2 py-1.5 rounded-lg app-input text-xs font-semibold">
+                    <!-- Populated via JS -->
+                  </select>
+                </div>
+                <button type="submit" title="Add Fixed Expense"
+                  class="mt-4 p-2 rounded-lg bg-rose-600 hover:bg-rose-500 text-white transition shrink-0">
+                  <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                </button>
+              </div>
+            </form>
+
+            <!-- Editable Fixed Expenses Rows -->
+            <div id="setup-fixed-list" class="space-y-2">
+              <!-- Rendered via JS -->
+            </div>
+          </div>
+
+          <!-- RIGHT (5 cols): VARIABLE EXPENSES & PERCENTAGE EDITOR -->
+          <div class="lg:col-span-5 app-card rounded-2xl p-5 space-y-4">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <div class="flex items-center gap-2.5">
+                <div class="w-8 h-8 rounded-lg bg-emerald-500/15 text-emerald-400 flex items-center justify-center shrink-0">
+                  <i data-lucide="pie-chart" class="w-4 h-4"></i>
+                </div>
+                <div>
+                  <h3 class="text-sm font-bold">Variable Expenses &amp; % (Priority #3)</h3>
+                  <p class="text-[11px]" style="color: var(--text-secondary)">Splits remaining base income &amp; extra income</p>
+                </div>
+              </div>
+
+              <div class="flex items-center gap-1.5">
+                <span id="setup-var-pct-badge" class="px-2.5 py-1 rounded-full text-xs font-extrabold mono-num bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                  100%
+                </span>
+                <button type="button" id="setup-autobalance-btn" onclick="autoBalanceVariablePercentages()"
+                  class="hidden px-2.5 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 border border-amber-500/40 text-[11px] font-bold transition">
+                  Auto-Balance 100%
+                </button>
+              </div>
+            </div>
+
+            <!-- Add New Variable Category Form -->
+            <form onsubmit="addCustomVariableCategory(event)" class="p-3 rounded-xl app-subcard grid grid-cols-1 sm:grid-cols-12 gap-2 items-end">
+              <div class="sm:col-span-5">
+                <label class="block text-[10px] font-bold uppercase tracking-wider mb-1" style="color: var(--text-muted)">Category</label>
+                <input id="setup-new-var-name" type="text" required placeholder="e.g. Emergency"
+                  class="w-full px-2.5 py-1.5 rounded-lg app-input text-xs font-semibold" />
+              </div>
+              <div class="sm:col-span-3">
+                <label class="block text-[10px] font-bold uppercase tracking-wider mb-1" style="color: var(--text-muted)">Share %</label>
+                <input id="setup-new-var-pct" type="number" min="0" max="100" step="1" required placeholder="10"
+                  class="w-full px-2.5 py-1.5 rounded-lg app-input text-xs font-bold mono-num" />
+              </div>
+              <div class="sm:col-span-4 flex items-center gap-1.5">
+                <div class="flex-1 min-w-0">
+                  <label class="block text-[10px] font-bold uppercase tracking-wider mb-1" style="color: var(--text-muted)">Bank</label>
+                  <select id="setup-new-var-bank" class="w-full px-2 py-1.5 rounded-lg app-input text-xs font-semibold">
+                    <!-- Populated via JS -->
+                  </select>
+                </div>
+                <button type="submit" title="Add Variable Category"
+                  class="mt-4 p-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white transition shrink-0">
+                  <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                </button>
+              </div>
+            </form>
+
+            <!-- Editable Variable Categories Rows -->
+            <div id="setup-variable-list" class="space-y-2">
+              <!-- Rendered via JS -->
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- TOAST NOTIFICATION -->
+  <div id="toast" class="fixed bottom-5 right-5 z-50 transform translate-y-20 opacity-0 transition-all duration-300 pointer-events-none">
+    <div class="app-card px-4 py-3 rounded-xl shadow-2xl flex items-center gap-2.5 text-xs font-semibold">
+      <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-400 shrink-0"></i>
+      <span id="toast-message">Saved!</span>
+    </div>
+  </div>
+
+  <!-- ==================== FIREBASE SDK ==================== -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+    import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+    window.__firebaseSDK = { initializeApp, getAuth, signInAnonymously, signInWithCustomToken, getFirestore, doc, setDoc, getDoc };
+  </script>
+
+  <!-- ==================== MAIN APP SCRIPT ==================== -->
+  <script>
+    const STORAGE_KEY_USERS = 'pesoflow_users_v2';
+    const STORAGE_KEY_SESSION = 'pesoflow_session_v2';
+    const STORAGE_KEY_THEME = 'pesoflow_theme_v2';
+    const SESSION_MAX_AGE_MS = 90 * 24 * 60 * 60 * 1000; // 90 days persistent device session
+
+    // Permanent Firebase Configuration
+    const PERMANENT_FIREBASE_CONFIG = {
+      apiKey: "AIzaSyBoU1qcdxYI5imeMPozQdk17tZWezvonNc",
+      authDomain: "budget-system-67273.firebaseapp.com",
+      projectId: "budget-system-67273",
+      storageBucket: "budget-system-67273.firebasestorage.app",
+      messagingSenderId: "134905640776",
+      appId: "1:134905640776:web:b56fd71f748d53fd26a57d",
+      measurementId: "G-VCLGPVX933"
+    };
+
+    let authMode = 'login';
+    let currentUser = null;
+    let firestoreDB = null;
+    let firebaseReadyPromise = null;
+    let hasCompletedInitialLoad = false;
+    let hasPendingCloudWrite = false;
+    let allBankCardsExpanded = false;
+    let expandedStagedDebtIds = new Set();
+    let isRestoringWeekState = false;
+    let cloudSyncDebounceTimer = null;
+
+    // Default Banks & E-Wallets
+    const DEFAULT_BANKS = [
+      { name: 'MariBank', colorClass: 'pill-maribank' },
+      { name: 'Maribank Francis', colorClass: 'pill-maribank' },
+      { name: 'Tonik', colorClass: 'pill-tonik' },
+      { name: 'Maya', colorClass: 'pill-maya' },
+      { name: 'GoTyme', colorClass: 'pill-gotyme' },
+      { name: 'CIMB', colorClass: 'pill-cimb' },
+      { name: 'ShopeePay', colorClass: 'pill-shopeepay' }
+    ];
+
+    // Bank pill badge styling helper (supports user-configured banks + fallback matching)
+    function getBankPillClass(bank) {
+      const target = (bank || '').trim();
+      if (appState && Array.isArray(appState.banks)) {
+        const found = appState.banks.find(b => b.name.toLowerCase() === target.toLowerCase());
+        if (found && found.colorClass) {
+          return found.colorClass === 'pill-emerald' ? 'pill-maya' : found.colorClass;
+        }
+      }
+      const b = target.toLowerCase();
+      if (b.includes('maribank')) return 'pill-maribank';
+      if (b.includes('tonik')) return 'pill-tonik';
+      if (b.includes('maya')) return 'pill-maya';
+      if (b.includes('gotyme')) return 'pill-gotyme';
+      if (b.includes('cimb')) return 'pill-cimb';
+      if (b.includes('shopee')) return 'pill-shopeepay';
+      if (b.includes('gcash') || b.includes('bpi') || b.includes('bdo')) return 'pill-blue';
+      return 'pill-blue';
+    }
+
+    // Default Fixed Weekly Expenses
+    const DEFAULT_FIXED_ITEMS = [
+      { id: 'internet', name: 'Internet Bill', cycleLabel: '125/week', bank: 'CIMB', weeklyAmount: 125.00, enabled: true, locked: false },
+      { id: 'bigas', name: 'Bigas', cycleLabel: '120/week', bank: 'Maribank Francis', weeklyAmount: 120.00, enabled: true, locked: false },
+      { id: 'load', name: 'Load', cycleLabel: '90/15 days', bank: 'MariBank', weeklyAmount: 42.00, enabled: true, locked: false },
+      { id: 'gas', name: 'Gas', cycleLabel: '200/10 days', bank: 'MariBank', weeklyAmount: 140.00, enabled: true, locked: false },
+      { id: 'change_oil', name: 'Change Oil', cycleLabel: '420/2 mos', bank: 'GoTyme', weeklyAmount: 49.00, enabled: true, locked: false },
+      { id: 'motor_reg', name: 'Motor Registration', cycleLabel: '2,500/yearly', bank: 'GoTyme', weeklyAmount: 48.08, enabled: true, locked: false },
+      { id: 'savings', name: 'Savings', cycleLabel: '200/week', bank: 'MariBank', weeklyAmount: 200.00, enabled: true, locked: false },
+    ];
+
+    // Default Variable Expenses & Wallets
+    const DEFAULT_VARIABLE_CATEGORIES = [
+      { id: 'food', name: 'Food', pct: 50, bank: 'MariBank', dotColor: 'bg-orange-400', extraTextColor: 'text-orange-400' },
+      { id: 'personal', name: 'Personal', pct: 20, bank: 'Tonik', dotColor: 'bg-purple-400', extraTextColor: 'text-purple-400' },
+      { id: 'cash_hold', name: 'Cash Hold', pct: 10, bank: 'Maya', dotColor: 'bg-emerald-400', extraTextColor: 'text-emerald-400' },
+      { id: 'sports', name: 'Sports', pct: 5, bank: 'Tonik', dotColor: 'bg-blue-400', extraTextColor: 'text-blue-400' },
+      { id: 'school', name: 'School', pct: 5, bank: 'Tonik', dotColor: 'bg-amber-400', extraTextColor: 'text-amber-400' },
+      { id: 'wants', name: 'Wants', pct: 10, bank: 'Maya', dotColor: 'bg-pink-400', extraTextColor: 'text-pink-400' },
+    ];
+
+    // Base Weekly Income Presets
+    const INCOME_PRESETS = {
+      allowance: { label: 'Allowance', amount: 1200 },
+      kuya: { label: 'Kuya Work', amount: 800 },
+      sprout: { label: 'Sprout', amount: 500 }
+    };
+
+    let appState = {
+      lastUpdatedAt: 0,
+      calYear: 2026,
+      calMonth: 10, // November 2026
+      selectedDate: '2026-11-16',
+      incomeStartDate: '2026-11-16',
+      incomeEndDate: '2026-11-20',
+      targetStartDate: '2026-11-23',
+      targetEndDate: '2026-11-29',
+      activeIncomePresets: {
+        allowance: false,
+        kuya: true,
+        sprout: true
+      },
+      baseIncomeExpr: '1300',
+      baseIncomeValue: 1300,
+      extraIncomeExpr: '',
+      extraIncomeValue: 0,
+      spaylaterWeekly: 367.50,
+      spaylaterLocked: false,
+      sloanWeekly: 0,
+      sloanLocked: false,
+      debtBank: 'ShopeePay',
+      banks: JSON.parse(JSON.stringify(DEFAULT_BANKS)),
+      fixedItems: JSON.parse(JSON.stringify(DEFAULT_FIXED_ITEMS)),
+      variableCategories: JSON.parse(JSON.stringify(DEFAULT_VARIABLE_CATEGORIES)),
+      debts: [
+        {
+          id: 'debt-spay-1',
+          provider: 'SPaylater',
+          label: 'SPaylater Bill',
+          totalBill: 967,
+          cashSaved: 232,
+          startDate: '2026-11-16',
+          dueDate: '2026-12-05',
+          locked: true,
+          paid: false
+        }
+      ],
+      savedAllocations: [],
+      transferredChecklist: {}
+    };
+
+    function normalizeAppState() {
+      if (!Array.isArray(appState.banks) || appState.banks.length === 0) {
+        appState.banks = JSON.parse(JSON.stringify(DEFAULT_BANKS));
+      }
+      if (!Array.isArray(appState.fixedItems) || appState.fixedItems.length === 0) {
+        appState.fixedItems = JSON.parse(JSON.stringify(DEFAULT_FIXED_ITEMS));
+      }
+      if (!Array.isArray(appState.variableCategories) || appState.variableCategories.length === 0) {
+        appState.variableCategories = JSON.parse(JSON.stringify(DEFAULT_VARIABLE_CATEGORIES));
+      }
+      if (!appState.debtBank) {
+        appState.debtBank = 'ShopeePay';
+      }
+    }
+
+    let isDraggingCal = false;
+    let dragStartStr = null;
+    let dragCurrentStr = null;
+
+    // ==================== THEME (DARK MODE PRIMARY + TOP-RIGHT LIGHT MODE TOGGLE) ====================
+    function initTheme() {
+      const savedTheme = localStorage.getItem(STORAGE_KEY_THEME) || 'dark';
+      applyTheme(savedTheme);
+    }
+
+    function applyTheme(mode) {
+      const html = document.documentElement;
+      const isDark = mode === 'dark';
+      if (isDark) {
+        html.classList.add('dark');
+      } else {
+        html.classList.remove('dark');
+      }
+      localStorage.setItem(STORAGE_KEY_THEME, mode);
+
+      const iconName = isDark ? 'sun' : 'moon';
+      const labelText = isDark ? 'Light' : 'Dark';
+      const authLabelText = isDark ? 'Light Mode' : 'Dark Mode';
+
+      const hIcon = document.getElementById('header-theme-icon');
+      const hLabel = document.getElementById('header-theme-label');
+      const aIcon = document.getElementById('auth-theme-icon');
+      const aLabel = document.getElementById('auth-theme-label');
+
+      if (hIcon) {
+        hIcon.setAttribute('data-lucide', iconName);
+        hIcon.className = isDark ? 'w-4 h-4 text-amber-400' : 'w-4 h-4 text-slate-700';
+      }
+      if (hLabel) hLabel.textContent = labelText;
+      if (aIcon) {
+        aIcon.setAttribute('data-lucide', iconName);
+        aIcon.className = isDark ? 'w-4 h-4 text-amber-400' : 'w-4 h-4 text-slate-700';
+      }
+      if (aLabel) aLabel.textContent = authLabelText;
+
+      if (window.lucide) lucide.createIcons();
+    }
+
+    function toggleTheme() {
+      const isCurrentlyDark = document.documentElement.classList.contains('dark');
+      applyTheme(isCurrentlyDark ? 'light' : 'dark');
+    }
+
+    // ==================== MATH PARSER & FORMATTING ====================
+    function evaluateMathExpr(raw) {
+      if (raw === null || raw === undefined) return 0;
+      const cleaned = String(raw).replace(/[₱,\s]/g, '');
+      if (!cleaned) return 0;
+      if (!/^[0-9+\-*/().]+$/.test(cleaned)) {
+        const parsed = parseFloat(cleaned);
+        return isNaN(parsed) ? 0 : parsed;
+      }
+      const trimmed = cleaned.replace(/[+\-*/.(]+$/, '');
+      if (!trimmed) return 0;
+      try {
+        const result = Function('"use strict"; return (' + trimmed + ')')();
+        if (typeof result === 'number' && isFinite(result)) {
+          return Math.max(0, Math.round(result * 100) / 100);
+        }
+        return 0;
+      } catch (e) {
+        return 0;
+      }
+    }
+
+    function formatPHP(num) {
+      const val = Number(num) || 0;
+      return '₱' + val.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    function formatCompactPHP(num) {
+      const val = Number(num) || 0;
+      return Number.isInteger(val)
+        ? '₱' + val.toLocaleString('en-PH')
+        : '₱' + val.toLocaleString('en-PH', { minimumFractionDigits: 1, maximumFractionDigits: 2 });
+    }
+
+    // ==================== AUTHENTICATION & PERSISTENT DEVICE MEMORY ====================
+    function initUsers() {
+      const existing = JSON.parse(localStorage.getItem(STORAGE_KEY_USERS) || '{}');
+      if (!existing['von']) {
+        existing['von'] = { username: 'von', password: '123' };
+        localStorage.setItem(STORAGE_KEY_USERS, JSON.stringify(existing));
+      }
+    }
+
+    function saveDeviceSession(username) {
+      const rememberCheckbox = document.getElementById('auth-remember-device');
+      const shouldRemember = rememberCheckbox ? rememberCheckbox.checked : true;
+      const payload = JSON.stringify({
+        username,
+        remember: shouldRemember,
+        expiresAt: Date.now() + SESSION_MAX_AGE_MS
+      });
+      try {
+        localStorage.setItem(STORAGE_KEY_SESSION, payload);
+      } catch (e) {}
+      try {
+        const maxAgeSec = shouldRemember ? Math.floor(SESSION_MAX_AGE_MS / 1000) : 86400;
+        document.cookie = `${STORAGE_KEY_SESSION}=${encodeURIComponent(username)}; path=/; max-age=${maxAgeSec}; SameSite=Lax`;
+      } catch (e) {}
+    }
+
+    function getSavedDeviceSession() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY_SESSION);
+        if (raw) {
+          if (raw.startsWith('{')) {
+            const parsed = JSON.parse(raw);
+            if (parsed && parsed.username && (!parsed.expiresAt || parsed.expiresAt > Date.now())) {
+              return parsed.username;
+            }
+          } else {
+            return raw;
+          }
+        }
+      } catch (e) {}
+      try {
+        const match = document.cookie.match(new RegExp('(?:^|; )' + STORAGE_KEY_SESSION + '=([^;]*)'));
+        if (match && match[1]) {
+          return decodeURIComponent(match[1]);
+        }
+      } catch (e) {}
+      return null;
+    }
+
+    function clearDeviceSession() {
+      try {
+        localStorage.removeItem(STORAGE_KEY_SESSION);
+      } catch (e) {}
+      try {
+        document.cookie = `${STORAGE_KEY_SESSION}=; path=/; max-age=0; SameSite=Lax`;
+      } catch (e) {}
+    }
+
+    function switchAuthTab(mode) {
+      authMode = mode;
+      const loginTab = document.getElementById('tab-login');
+      const signupTab = document.getElementById('tab-signup');
+      const submitBtn = document.getElementById('auth-submit-btn').querySelector('span');
+      document.getElementById('auth-error').classList.add('hidden');
+
+      if (mode === 'login') {
+        loginTab.className = 'flex-1 py-3 text-xs font-bold uppercase tracking-wider border-b-2 border-blue-500 text-blue-500 transition';
+        signupTab.className = 'flex-1 py-3 text-xs font-bold uppercase tracking-wider border-b-2 border-transparent opacity-60 hover:opacity-100 transition';
+        submitBtn.textContent = 'Log In';
+      } else {
+        signupTab.className = 'flex-1 py-3 text-xs font-bold uppercase tracking-wider border-b-2 border-blue-500 text-blue-500 transition';
+        loginTab.className = 'flex-1 py-3 text-xs font-bold uppercase tracking-wider border-b-2 border-transparent opacity-60 hover:opacity-100 transition';
+        submitBtn.textContent = 'Create Account';
+      }
+    }
+
+    function handleAuthSubmit(e) {
+      e.preventDefault();
+      const username = document.getElementById('auth-username').value.trim().toLowerCase();
+      const password = document.getElementById('auth-password').value.trim();
+      const errBox = document.getElementById('auth-error');
+      const errText = document.getElementById('auth-error-text');
+
+      if (!username || !password) return;
+      const users = JSON.parse(localStorage.getItem(STORAGE_KEY_USERS) || '{}');
+
+      if (authMode === 'login') {
+        if (users[username] && users[username].password === password) {
+          completeLogin(username);
+        } else {
+          errText.textContent = 'Invalid username or passkey.';
+          errBox.classList.remove('hidden');
+        }
+      } else {
+        if (users[username]) {
+          errText.textContent = 'Username already exists.';
+          errBox.classList.remove('hidden');
+        } else {
+          users[username] = { username, password };
+          localStorage.setItem(STORAGE_KEY_USERS, JSON.stringify(users));
+          completeLogin(username);
+        }
+      }
+    }
+
+    async function completeLogin(username) {
+      currentUser = username;
+      hasCompletedInitialLoad = false;
+      saveDeviceSession(username);
+
+      document.getElementById('user-display-name').textContent = username;
+      document.getElementById('user-avatar').textContent = username.charAt(0).toUpperCase();
+
+      // 1. Load cached local snapshot immediately for instant render (without writing back yet)
+      loadLocalUserDataSync(username);
+
+      document.getElementById('auth-view').classList.add('hidden');
+      document.getElementById('app-shell').classList.remove('hidden');
+
+      if (appState.savedAllocations.length > 0) {
+        loadWeekAllocationIfSaved(appState.targetStartDate, appState.targetEndDate);
+      }
+      refreshAllUI();
+
+      // 2. Await Firestore hydration BEFORE unlocking any setDoc() auto-saves
+      const cloudResult = await loadCloudUserData(username);
+      hasCompletedInitialLoad = true;
+
+      if (cloudResult.loadedFromCloud) {
+        loadWeekAllocationIfSaved(appState.targetStartDate, appState.targetEndDate);
+        refreshAllUI();
+        // Ensure localStorage mirrors the newer cloud snapshot
+        localStorage.setItem(getUserStorageKey(username), JSON.stringify(appState));
+      } else if (appState.savedAllocations.length === 0) {
+        // Brand-new account with no local or cloud data yet: create initial week snapshot
+        saveCurrentAllocation(true, true);
+      } else if (cloudResult.canWriteCloud) {
+        // Local data is newer than cloud (or cloud doc didn't exist yet): push local state up
+        await persistUserData(true);
+      }
+    }
+
+    function logout() {
+      currentUser = null;
+      hasCompletedInitialLoad = false;
+      hasPendingCloudWrite = false;
+      clearTimeout(cloudSyncDebounceTimer);
+      clearDeviceSession();
+      document.getElementById('app-shell').classList.add('hidden');
+      document.getElementById('auth-view').classList.remove('hidden');
+      document.getElementById('auth-password').value = '';
+    }
+
+    function getUserStorageKey(username) {
+      return `pesoflow_data_${username}_v2`;
+    }
+
+    function getDefaultAppState() {
+      return {
+        lastUpdatedAt: 0,
+        calYear: 2026,
+        calMonth: 10, // November 2026
+        selectedDate: '2026-11-16',
+        incomeStartDate: '2026-11-16',
+        incomeEndDate: '2026-11-20',
+        targetStartDate: '2026-11-23',
+        targetEndDate: '2026-11-29',
+        activeIncomePresets: {
+          allowance: false,
+          kuya: true,
+          sprout: true
+        },
+        baseIncomeExpr: '1300',
+        baseIncomeValue: 1300,
+        extraIncomeExpr: '',
+        extraIncomeValue: 0,
+        spaylaterWeekly: 367.50,
+        spaylaterLocked: false,
+        sloanWeekly: 0,
+        sloanLocked: false,
+        debtBank: 'ShopeePay',
+        banks: JSON.parse(JSON.stringify(DEFAULT_BANKS)),
+        fixedItems: JSON.parse(JSON.stringify(DEFAULT_FIXED_ITEMS)),
+        variableCategories: JSON.parse(JSON.stringify(DEFAULT_VARIABLE_CATEGORIES)),
+        debts: [
+          {
+            id: 'debt-spay-1',
+            provider: 'SPaylater',
+            label: 'SPaylater Bill',
+            totalBill: 967,
+            cashSaved: 232,
+            startDate: '2026-11-16',
+            dueDate: '2026-12-05',
+            locked: true,
+            paid: false
+          }
+        ],
+        savedAllocations: [],
+        transferredChecklist: {}
+      };
+    }
+
+    function loadLocalUserDataSync(username) {
+      const fresh = getDefaultAppState();
+      const savedLocal = localStorage.getItem(getUserStorageKey(username));
+      if (savedLocal) {
+        try {
+          const parsed = JSON.parse(savedLocal);
+          appState = { ...fresh, ...parsed };
+        } catch (e) {
+          appState = fresh;
+        }
+      } else {
+        appState = fresh;
+      }
+      normalizeAppState();
+    }
+
+    function updateSyncStatusBadge(state, customText) {
+      const dot = document.getElementById('fb-status-dot');
+      const txt = document.getElementById('fb-status-text');
+      if (!dot || !txt) return;
+
+      if (state === 'synced') {
+        dot.className = 'w-2 h-2 rounded-full bg-emerald-400 shrink-0 ml-1';
+        txt.textContent = customText || 'Cloud Synced';
+      } else if (state === 'saving') {
+        dot.className = 'w-2 h-2 rounded-full bg-amber-400 shrink-0 ml-1 animate-pulse';
+        txt.textContent = customText || 'Syncing...';
+      } else {
+        dot.className = 'w-2 h-2 rounded-full bg-amber-500 shrink-0 ml-1';
+        txt.textContent = customText || 'Local Saved (Check Firestore Rules)';
+      }
+    }
+
+    async function loadCloudUserData(username) {
+      if (firebaseReadyPromise) {
+        await firebaseReadyPromise;
+      }
+
+      if (!firestoreDB || !window.__firebaseSDK) {
+        updateSyncStatusBadge('local', 'Local Saved (Offline)');
+        return { loadedFromCloud: false, canWriteCloud: false };
+      }
+
+      const { doc, getDoc } = window.__firebaseSDK;
+      const appId = typeof __app_id !== 'undefined' ? __app_id : 'budget-system-67273';
+      const candidateRefs = [
+        doc(firestoreDB, 'von_allocator_users', username),
+        doc(firestoreDB, 'artifacts', appId, 'public', 'data', 'von_allocator_users', username),
+        doc(firestoreDB, 'artifacts', appId, 'public', 'data', 'pesoflow_users', username)
+      ];
+
+      let bestCloudData = null;
+      let anyReadSucceeded = false;
+
+      for (const ref of candidateRefs) {
+        try {
+          const snap = await getDoc(ref);
+          anyReadSucceeded = true;
+          if (snap.exists()) {
+            const data = snap.data();
+            const ts = Number(data.lastUpdatedAt) || 1;
+            const bestTs = bestCloudData ? (Number(bestCloudData.lastUpdatedAt) || 1) : 0;
+            if (!bestCloudData || ts >= bestTs) {
+              bestCloudData = data;
+            }
+          }
+        } catch (err) {
+          console.warn('Firestore read path check:', ref.path, err.code || err.message);
+        }
+      }
+
+      if (!anyReadSucceeded) {
+        updateSyncStatusBadge('local', 'Local Saved (Check Firestore Rules)');
+        return { loadedFromCloud: false, canWriteCloud: false };
+      }
+
+      updateSyncStatusBadge('synced', 'Cloud Synced');
+
+      if (bestCloudData) {
+        const localUpdated = Number(appState.lastUpdatedAt) || 0;
+        const cloudUpdated = Number(bestCloudData.lastUpdatedAt) || 1;
+        if (cloudUpdated >= localUpdated) {
+          appState = { ...getDefaultAppState(), ...bestCloudData };
+          normalizeAppState();
+          return { loadedFromCloud: true, canWriteCloud: true };
+        }
+      }
+
+      return { loadedFromCloud: false, canWriteCloud: true };
+    }
+
+    function sanitizeForFirestore(obj) {
+      return JSON.parse(JSON.stringify(obj, (key, value) => {
+        return value === undefined ? null : value;
+      }));
+    }
+
+    async function writeStateToFirestore(username, sanitizedData) {
+      if (!firestoreDB || !window.__firebaseSDK || !username) return false;
+      const { doc, setDoc } = window.__firebaseSDK;
+      const appId = typeof __app_id !== 'undefined' ? __app_id : 'budget-system-67273';
+
+      const targetRefs = [
+        doc(firestoreDB, 'von_allocator_users', username),
+        doc(firestoreDB, 'artifacts', appId, 'public', 'data', 'von_allocator_users', username)
+      ];
+
+      let wroteToAny = false;
+      for (const ref of targetRefs) {
+        try {
+          await setDoc(ref, sanitizedData, { merge: true });
+          wroteToAny = true;
+          break; // Primary succeeded
+        } catch (err) {
+          console.warn('Firestore write path fallback:', ref.path, err.code || err.message);
+        }
+      }
+      return wroteToAny;
+    }
+
+    async function persistUserData(immediateCloud = true) {
+      if (!currentUser) return;
+
+      // Always update localStorage immediately so rapid reloads never lose local state
+      appState.lastUpdatedAt = Date.now();
+      const sanitizedState = sanitizeForFirestore(appState);
+      try {
+        localStorage.setItem(getUserStorageKey(currentUser), JSON.stringify(sanitizedState));
+      } catch (e) {}
+
+      // Prevent overwriting cloud data before initial cloud load completes
+      if (!hasCompletedInitialLoad) {
+        return;
+      }
+
+      hasPendingCloudWrite = true;
+      updateSyncStatusBadge('saving', 'Syncing...');
+
+      const pushToFirestore = async () => {
+        if (!currentUser || !hasCompletedInitialLoad) return;
+        if (firebaseReadyPromise) {
+          await firebaseReadyPromise;
+        }
+        const payload = sanitizeForFirestore(appState);
+        const ok = await writeStateToFirestore(currentUser, payload);
+        hasPendingCloudWrite = false;
+        if (ok) {
+          updateSyncStatusBadge('synced', 'Cloud Synced');
+        } else {
+          updateSyncStatusBadge('local', 'Local Saved (Check Firestore Rules)');
+        }
+      };
+
+      clearTimeout(cloudSyncDebounceTimer);
+      if (immediateCloud) {
+        await pushToFirestore();
+      } else {
+        cloudSyncDebounceTimer = setTimeout(pushToFirestore, 250);
+      }
+    }
+
+    // Flush any pending save immediately if user switches tab or reloads browser
+    function flushPendingSaveOnExit() {
+      if (!currentUser) return;
+      try {
+        const sanitizedState = sanitizeForFirestore(appState);
+        localStorage.setItem(getUserStorageKey(currentUser), JSON.stringify(sanitizedState));
+        if (hasCompletedInitialLoad && hasPendingCloudWrite && firestoreDB && window.__firebaseSDK) {
+          clearTimeout(cloudSyncDebounceTimer);
+          writeStateToFirestore(currentUser, sanitizedState);
+        }
+      } catch (e) {}
+    }
+
+    window.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') {
+        flushPendingSaveOnExit();
+      }
+    });
+    window.addEventListener('beforeunload', flushPendingSaveOnExit);
+
+    // ==================== PERMANENT FIREBASE INIT ====================
+    function initPermanentFirebase() {
+      firebaseReadyPromise = new Promise((resolve) => {
+        const tryConnect = async () => {
+          if (!window.__firebaseSDK) {
+            setTimeout(tryConnect, 100);
+            return;
+          }
+          try {
+            const { initializeApp, getAuth, signInAnonymously, signInWithCustomToken, getFirestore } = window.__firebaseSDK;
+            const app = initializeApp(PERMANENT_FIREBASE_CONFIG);
+            const auth = getAuth(app);
+            try {
+              if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                await signInWithCustomToken(auth, __initial_auth_token);
+              } else {
+                await signInAnonymously(auth);
+              }
+            } catch (authErr) {
+              // Gracefully continue if Anonymous Auth is disabled in Firebase Console
+              console.warn('Auth skipped, using direct Firestore rules:', authErr.code || authErr.message);
+            }
+            firestoreDB = getFirestore(app);
+            resolve(true);
+          } catch (err) {
+            console.warn('Firebase init note:', err);
+            resolve(false);
+          }
+        };
+        tryConnect();
+      });
+    }
+
+    async function manualCloudSync() {
+      if (!currentUser) return;
+      hasCompletedInitialLoad = true;
+      await persistUserData(true);
+      const txt = document.getElementById('fb-status-text')?.textContent || 'Synced';
+      showToast(txt === 'Cloud Synced'
+        ? 'Synced with Firebase (budget-system-67273)!'
+        : 'Saved locally — verify Firestore rules allow read/write on von_allocator_users.');
+    }
+
+    // ==================== SIDEBAR & NAVIGATION ====================
+    function toggleSidebar() {
+      const sidebar = document.getElementById('sidebar');
+      const isCollapsed = sidebar.getAttribute('data-collapsed') === 'true';
+      const labels = document.querySelectorAll('.sidebar-label');
+      const toggleIcon = document.getElementById('sidebar-toggle-icon');
+
+      if (isCollapsed) {
+        sidebar.style.width = '220px';
+        sidebar.setAttribute('data-collapsed', 'false');
+        labels.forEach(el => el.classList.remove('hidden'));
+        toggleIcon.setAttribute('data-lucide', 'panel-left-close');
+      } else {
+        sidebar.style.width = '68px';
+        sidebar.setAttribute('data-collapsed', 'true');
+        labels.forEach(el => el.classList.add('hidden'));
+        toggleIcon.setAttribute('data-lucide', 'panel-left-open');
+      }
+      if (window.lucide) lucide.createIcons();
+    }
+
+    function navigateTo(page) {
+      ['allocation', 'debts', 'saved', 'setup'].forEach(p => {
+        const pageEl = document.getElementById(`page-${p}`);
+        if (pageEl) pageEl.classList.add('hidden');
+        const navBtn = document.getElementById(`nav-${p}`);
+        if (navBtn) {
+          if (p === page) {
+            navBtn.className = 'nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold bg-blue-600 text-white shadow-sm transition';
+          } else {
+            navBtn.className = 'nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold opacity-70 hover:opacity-100 hover:bg-slate-500/10 transition';
+          }
+        }
+      });
+
+      const activePageEl = document.getElementById(`page-${page}`);
+      if (activePageEl) activePageEl.classList.remove('hidden');
+
+      const titles = {
+        allocation: ['Weekly Budget Allocation', "Allocate this week's sahod & allowance to next week's expenses"],
+        debts: ['Debts', 'Advance SPaylater & SLoan planner sorted by due date'],
+        saved: ['Saved Allocations', 'Total allocation per bank — check off transfers or expand details'],
+        setup: ['Setup & Categories', 'Manage banks, fixed expenses, variable % splits & debt-first priority']
+      };
+      document.getElementById('page-title').textContent = titles[page][0];
+      document.getElementById('page-subtitle').textContent = titles[page][1];
+
+      if (page === 'allocation') {
+        syncLockedDebtsToAllocation(true);
+        renderFixedExpensesList();
+        recalculateBudget();
+      }
+      if (page === 'debts') renderDebtsPage();
+      if (page === 'saved') renderSavedPage();
+      if (page === 'setup') renderSetupPage();
+      if (window.lucide) lucide.createIcons();
+    }
+
+    // ==================== HEADER MINI-CALENDAR POPOVER ====================
+    function toggleHeaderCalPopover(e) {
+      if (e) e.stopPropagation();
+      const pop = document.getElementById('header-cal-popover');
+      if (!pop) return;
+      pop.classList.toggle('hidden');
+      if (!pop.classList.contains('hidden')) {
+        renderCalendar();
+      }
+    }
+
+    window.addEventListener('click', (e) => {
+      const wrapper = document.getElementById('header-cal-wrapper');
+      const pop = document.getElementById('header-cal-popover');
+      if (wrapper && pop && !wrapper.contains(e.target)) {
+        pop.classList.add('hidden');
+      }
+    });
+
+    // ==================== CALENDAR & PER-WEEK STATE SYNC ====================
+    function toISODate(d) {
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${y}-${m}-${day}`;
+    }
+
+    function parseISODate(str) {
+      const [y, m, d] = str.split('-').map(Number);
+      return new Date(y, m - 1, d);
+    }
+
+    function formatShortDate(str) {
+      const d = parseISODate(str);
+      return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    }
+
+    function formatFullRange(startStr, endStr) {
+      const s = parseISODate(startStr);
+      const e = parseISODate(endStr);
+      const sTxt = s.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      const eTxt = e.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+      return `${sTxt} – ${eTxt}`;
+    }
+
+    function getWeekNumber(d) {
+      const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+      const dayNum = date.getUTCDay() || 7;
+      date.setUTCDate(date.getUTCDate() + 4 - dayNum);
+      const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
+      return Math.ceil((((date - yearStart) / 86400000) + 1) / 7);
+    }
+
+    function getMondayOfWeek(dateObj) {
+      const d = new Date(dateObj);
+      const day = d.getDay();
+      const diff = day === 0 ? -6 : 1 - day;
+      d.setDate(d.getDate() + diff);
+      return d;
+    }
+
+    function applySnapshotToAllocation(snap) {
+      if (!snap) return;
+      if (snap.incomeStartDate) appState.incomeStartDate = snap.incomeStartDate;
+      if (snap.incomeEndDate) appState.incomeEndDate = snap.incomeEndDate;
+      if (snap.targetStartDate) appState.targetStartDate = snap.targetStartDate;
+      if (snap.targetEndDate) appState.targetEndDate = snap.targetEndDate;
+
+      if (snap.activeIncomePresets) {
+        appState.activeIncomePresets = { ...snap.activeIncomePresets };
+      } else {
+        const b = Number(snap.baseIncome) || 0;
+        appState.activeIncomePresets = {
+          allowance: b === 1200 || b === 2000 || b === 2500,
+          kuya: b === 800 || b === 1300 || b === 2000 || b === 2500,
+          sprout: b === 500 || b === 1300 || b === 2500
+        };
+      }
+
+      appState.baseIncomeValue = Number(snap.baseIncome) || 0;
+      appState.baseIncomeExpr = String(appState.baseIncomeValue);
+      appState.extraIncomeValue = Number(snap.extraIncome) || 0;
+      appState.extraIncomeExpr = appState.extraIncomeValue > 0 ? String(appState.extraIncomeValue) : '';
+
+      if (typeof snap.spaylaterWeekly === 'number') {
+        appState.spaylaterWeekly = snap.spaylaterWeekly;
+      }
+      if (typeof snap.sloanWeekly === 'number') {
+        appState.sloanWeekly = snap.sloanWeekly;
+      }
+
+      if (Array.isArray(snap.fixedItems) && snap.fixedItems.length > 0) {
+        const snapMap = {};
+        snap.fixedItems.forEach(it => { snapMap[it.id] = it; });
+        appState.fixedItems = appState.fixedItems.map(item => {
+          if (snapMap[item.id]) {
+            return {
+              ...item,
+              weeklyAmount: Number(snapMap[item.id].weeklyAmount) || item.weeklyAmount,
+              enabled: snapMap[item.id].enabled !== false
+            };
+          }
+          return item;
+        });
+      }
+    }
+
+    function loadWeekAllocationIfSaved(targetStartStr, targetEndStr) {
+      const weekId = `${targetStartStr}_${targetEndStr}`;
+      const existingSnap = appState.savedAllocations.find(s => s.id === weekId);
+      const badge = document.getElementById('allocation-week-status-badge');
+
+      isRestoringWeekState = true;
+      try {
+        if (existingSnap) {
+          applySnapshotToAllocation(existingSnap);
+          if (badge) {
+            badge.textContent = 'Auto-Saved';
+            badge.className = 'px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30';
+          }
+          return true;
+        } else {
+          appState.extraIncomeValue = 0;
+          appState.extraIncomeExpr = '';
+          if (badge) {
+            badge.textContent = 'New Week';
+            badge.className = 'px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-500/15 text-blue-400 border border-blue-500/30';
+          }
+          return false;
+        }
+      } finally {
+        isRestoringWeekState = false;
+      }
+    }
+
+    function selectIncomeWeekFromDate(dateStr) {
+      const clicked = parseISODate(dateStr);
+      const mon = getMondayOfWeek(clicked);
+      const fri = new Date(mon);
+      fri.setDate(mon.getDate() + 4);
+
+      const nextMon = new Date(mon);
+      nextMon.setDate(mon.getDate() + 7);
+      const nextSun = new Date(nextMon);
+      nextSun.setDate(nextMon.getDate() + 6);
+
+      appState.selectedDate = dateStr;
+      appState.incomeStartDate = toISODate(mon);
+      appState.incomeEndDate = toISODate(fri);
+      appState.targetStartDate = toISODate(nextMon);
+      appState.targetEndDate = toISODate(nextSun);
+
+      loadWeekAllocationIfSaved(appState.targetStartDate, appState.targetEndDate);
+      syncLockedDebtsToAllocation(true);
+      refreshAllUI(true);
+      persistUserData();
+    }
+
+    function applyDraggedRange(startStr, endStr) {
+      const d1 = parseISODate(startStr);
+      const d2 = parseISODate(endStr);
+      const [s, e] = d1 <= d2 ? [d1, d2] : [d2, d1];
+
+      const mon = getMondayOfWeek(s);
+      const nextMon = new Date(mon);
+      nextMon.setDate(mon.getDate() + 7);
+      const nextSun = new Date(nextMon);
+      nextSun.setDate(nextMon.getDate() + 6);
+
+      appState.selectedDate = toISODate(s);
+      appState.incomeStartDate = toISODate(s);
+      appState.incomeEndDate = toISODate(e);
+      appState.targetStartDate = toISODate(nextMon);
+      appState.targetEndDate = toISODate(nextSun);
+
+      loadWeekAllocationIfSaved(appState.targetStartDate, appState.targetEndDate);
+      syncLockedDebtsToAllocation(true);
+      refreshAllUI(true);
+      persistUserData();
+    }
+
+    function updateCalendarLabels() {
+      const incTxt = formatFullRange(appState.incomeStartDate, appState.incomeEndDate);
+      const tgtTxt = formatFullRange(appState.targetStartDate, appState.targetEndDate);
+      document.getElementById('cal-selected-date-pill').textContent = formatShortDate(appState.selectedDate);
+      document.getElementById('cal-income-range-text').textContent = incTxt;
+      document.getElementById('cal-target-range-text').textContent = tgtTxt;
+      document.getElementById('header-target-week').textContent = tgtTxt;
+
+      const miniInc = document.getElementById('mini-cal-income-range');
+      const miniTgt = document.getElementById('mini-cal-target-range');
+      if (miniInc) miniInc.textContent = incTxt;
+      if (miniTgt) miniTgt.textContent = tgtTxt;
+    }
+
+    function changeCalMonth(delta) {
+      appState.calMonth += delta;
+      if (appState.calMonth < 0) {
+        appState.calMonth = 11;
+        appState.calYear--;
+      } else if (appState.calMonth > 11) {
+        appState.calMonth = 0;
+        appState.calYear++;
+      }
+      renderCalendar();
+    }
+
+    function buildCalendarCellsHTML(cellHeightClass) {
+      const monthDate = new Date(appState.calYear, appState.calMonth, 1);
+      const firstDayWeekday = monthDate.getDay();
+      const startOffset = firstDayWeekday === 0 ? 6 : firstDayWeekday - 1;
+      const daysInMonth = new Date(appState.calYear, appState.calMonth + 1, 0).getDate();
+
+      let hlStart = appState.incomeStartDate;
+      let hlEnd = appState.incomeEndDate;
+      if (isDraggingCal && dragStartStr && dragCurrentStr) {
+        hlStart = dragStartStr <= dragCurrentStr ? dragStartStr : dragCurrentStr;
+        hlEnd = dragStartStr <= dragCurrentStr ? dragCurrentStr : dragStartStr;
+      }
+
+      let html = '';
+      for (let i = 0; i < startOffset; i++) {
+        html += `<div class="${cellHeightClass} rounded-lg opacity-30"></div>`;
+      }
+
+      for (let day = 1; day <= daysInMonth; day++) {
+        const curDate = new Date(appState.calYear, appState.calMonth, day);
+        const iso = toISODate(curDate);
+        const isSelectedSingle = iso === appState.selectedDate;
+        const isInIncomeRange = iso >= hlStart && iso <= hlEnd;
+        const isInTargetRange = iso >= appState.targetStartDate && iso <= appState.targetEndDate;
+
+        let classes = `${cellHeightClass} rounded-xl flex flex-col items-center justify-center text-xs font-semibold cursor-pointer relative border transition `;
+        if (isSelectedSingle) {
+          classes += 'bg-blue-600 text-white border-blue-500 shadow-sm ';
+        } else if (isInIncomeRange) {
+          classes += 'bg-blue-500/20 text-blue-400 border-blue-500/40 ';
+        } else if (isInTargetRange) {
+          classes += 'bg-emerald-500/15 text-emerald-400 border-emerald-500/35 ';
+        } else {
+          classes += 'hover:bg-slate-500/10 border-transparent ';
+        }
+
+        let dotHtml = '';
+        if (isInIncomeRange && !isSelectedSingle) {
+          dotHtml = `<span class="w-1 h-1 rounded-full bg-blue-400 mt-0.5"></span>`;
+        } else if (isInTargetRange) {
+          dotHtml = `<span class="w-1 h-1 rounded-full bg-emerald-400 mt-0.5"></span>`;
+        }
+
+        html += `
+          <div data-date="${iso}"
+               onmousedown="onCalMouseDown('${iso}')"
+               onmouseenter="onCalMouseEnter('${iso}')"
+               onclick="onCalSingleClick('${iso}')"
+               ondblclick="onCalDoubleClick('${iso}')"
+               class="${classes}">
+            <span>${day}</span>
+            ${dotHtml}
+          </div>
+        `;
+      }
+      return html;
+    }
+
+    function renderCalendar() {
+      const monthDate = new Date(appState.calYear, appState.calMonth, 1);
+      const monthLabel = monthDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+      const mainLabel = document.getElementById('cal-month-label');
+      const miniLabel = document.getElementById('mini-cal-month-label');
+      if (mainLabel) mainLabel.textContent = monthLabel;
+      if (miniLabel) miniLabel.textContent = monthLabel;
+
+      const mainGrid = document.getElementById('calendar-grid');
+      const miniGrid = document.getElementById('mini-calendar-grid');
+      if (mainGrid) mainGrid.innerHTML = buildCalendarCellsHTML('h-9');
+      if (miniGrid) miniGrid.innerHTML = buildCalendarCellsHTML('h-7 text-[11px]');
+    }
+
+    function onCalSingleClick(iso) {
+      appState.selectedDate = iso;
+      updateCalendarLabels();
+      renderCalendar();
+      syncLockedDebtsToAllocation(true);
+      recalculateBudget();
+      renderDebtsPage();
+      persistUserData();
+    }
+
+    function onCalDoubleClick(iso) {
+      selectIncomeWeekFromDate(iso);
+      showToast(`Mapped sahod week to ${formatFullRange(appState.targetStartDate, appState.targetEndDate)}`);
+    }
+
+    function onCalMouseDown(iso) {
+      isDraggingCal = true;
+      dragStartStr = iso;
+      dragCurrentStr = iso;
+    }
+
+    function onCalMouseEnter(iso) {
+      if (!isDraggingCal) return;
+      dragCurrentStr = iso;
+      renderCalendar();
+    }
+
+    window.addEventListener('mouseup', () => {
+      if (isDraggingCal) {
+        isDraggingCal = false;
+        if (dragStartStr && dragCurrentStr && dragStartStr !== dragCurrentStr) {
+          applyDraggedRange(dragStartStr, dragCurrentStr);
+          showToast(`Mapped sahod week to ${formatFullRange(appState.targetStartDate, appState.targetEndDate)}`);
+        }
+        dragStartStr = null;
+        dragCurrentStr = null;
+      }
+    });
+
+    // ==================== BASE WEEKLY INCOME (PRESET BUTTONS + SINGLE NUMBOX + SAVED WEEKS BAR) ====================
+    function renderAllocationSavedWeeksBar() {
+      const bar = document.getElementById('allocation-saved-weeks-bar');
+      if (!bar) return;
+
+      const activeId = `${appState.targetStartDate}_${appState.targetEndDate}`;
+      const badge = document.getElementById('allocation-week-status-badge');
+      const isCurrentSaved = appState.savedAllocations.some(s => s.id === activeId);
+      if (badge) {
+        if (isCurrentSaved) {
+          badge.textContent = 'Auto-Saved';
+          badge.className = 'px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30';
+        } else {
+          badge.textContent = 'New Week';
+          badge.className = 'px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-500/15 text-blue-400 border border-blue-500/30';
+        }
+      }
+
+      if (appState.savedAllocations.length === 0) {
+        bar.innerHTML = '';
+        return;
+      }
+
+      bar.innerHTML = appState.savedAllocations.map((snap, idx) => {
+        const isActive = snap.id === activeId;
+        const wkShort = snap.weekBadge.split(' (')[0];
+        return `
+          <button type="button" onclick="selectSavedWeekFromAllocationBar(${idx})"
+            title="Load ${snap.weekBadge} (${formatPHP(snap.baseIncome)})"
+            class="px-2.5 py-1 rounded-lg text-[11px] font-semibold whitespace-nowrap border transition flex items-center gap-1.5 shrink-0 ${
+              isActive
+                ? 'bg-blue-600 text-white border-blue-500 shadow-xs'
+                : 'app-subcard hover:border-blue-500/40 opacity-80 hover:opacity-100'
+            }">
+            <span>${wkShort}</span>
+            <span class="mono-num text-[10px] ${isActive ? 'text-blue-100' : 'text-blue-400'}">${formatCompactPHP(snap.baseIncome)}</span>
+          </button>
+        `;
+      }).join('');
+    }
+
+    function selectSavedWeekFromAllocationBar(idx) {
+      const snap = appState.savedAllocations[idx];
+      if (!snap) return;
+      applySnapshotToAllocation(snap);
+      refreshAllUI(true);
+      persistUserData();
+      showToast(`Loaded ${snap.weekBadge}`);
+    }
+
+    function renderIncomePresetButtons() {
+      Object.keys(INCOME_PRESETS).forEach(key => {
+        const btn = document.getElementById(`btn-src-${key}`);
+        const dot = document.getElementById(`badge-src-${key}`);
+        const isActive = !!appState.activeIncomePresets[key];
+        if (!btn || !dot) return;
+
+        if (isActive) {
+          btn.className = 'p-2.5 rounded-xl border border-blue-500/60 bg-blue-500/15 text-left transition flex flex-col justify-between shadow-xs';
+          dot.className = 'w-2 h-2 rounded-full bg-blue-400';
+        } else {
+          btn.className = 'p-2.5 rounded-xl border app-divider app-subcard opacity-65 hover:opacity-100 text-left transition flex flex-col justify-between';
+          dot.className = 'w-2 h-2 rounded-full bg-slate-500';
+        }
+      });
+    }
+
+    function toggleIncomePreset(key) {
+      appState.activeIncomePresets[key] = !appState.activeIncomePresets[key];
+      let total = 0;
+      Object.keys(INCOME_PRESETS).forEach(k => {
+        if (appState.activeIncomePresets[k]) {
+          total += INCOME_PRESETS[k].amount;
+        }
+      });
+      appState.baseIncomeValue = total;
+      appState.baseIncomeExpr = String(total);
+      document.getElementById('base-income-single-input').value = total;
+      renderIncomePresetButtons();
+      recalculateBudget();
+      autoSaveCurrentWeek();
+    }
+
+    function handleSingleBaseIncomeInput() {
+      const raw = document.getElementById('base-income-single-input').value;
+      appState.baseIncomeExpr = raw;
+      appState.baseIncomeValue = evaluateMathExpr(raw);
+      recalculateBudget();
+      autoSaveCurrentWeek();
+    }
+
+    function finalizeSingleBaseIncomeInput() {
+      appState.baseIncomeExpr = String(appState.baseIncomeValue);
+      document.getElementById('base-income-single-input').value = appState.baseIncomeValue;
+      recalculateBudget();
+      autoSaveCurrentWeek(true);
+    }
+
+    // ==================== EXTRA INCOME ====================
+    function handleExtraIncomeInput() {
+      const expr = document.getElementById('extra-income-input').value;
+      appState.extraIncomeExpr = expr;
+      appState.extraIncomeValue = evaluateMathExpr(expr);
+      recalculateBudget();
+      autoSaveCurrentWeek();
+    }
+
+    function finalizeExtraIncomeInput() {
+      if (appState.extraIncomeExpr.trim() !== '') {
+        appState.extraIncomeExpr = String(appState.extraIncomeValue);
+        document.getElementById('extra-income-input').value = appState.extraIncomeValue;
+      }
+      recalculateBudget();
+      autoSaveCurrentWeek(true);
+    }
+
+    // ==================== FIXED WEEKLY EXPENSES (WITH ROW LOCKS) ====================
+    function renderFixedExpensesList() {
+      const container = document.getElementById('fixed-expenses-list');
+      if (!container) return;
+      container.innerHTML = appState.fixedItems.map(item => `
+        <div class="py-2.5 flex items-center justify-between gap-2 ${item.enabled ? '' : 'opacity-45'}">
+          <div class="flex items-center gap-2 min-w-0">
+            <input type="checkbox" ${item.enabled ? 'checked' : ''} onchange="toggleFixedItem('${item.id}')"
+              class="aesthetic-checkbox" />
+            <div class="min-w-0">
+              <div class="text-xs font-medium truncate">
+                ${item.name} <span style="color: var(--text-secondary)">(${item.cycleLabel})</span>
+              </div>
+              <span class="inline-block mt-0.5 px-2 py-0.2 rounded text-[10px] font-semibold ${getBankPillClass(item.bank)}">
+                ${item.bank}
+              </span>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-1.5 shrink-0">
+            <button type="button" onclick="toggleFixedItemLock('${item.id}')"
+              title="${item.locked ? 'Unlock expense amount' : 'Lock expense amount'}"
+              class="p-1.5 rounded-lg transition ${
+                item.locked
+                  ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40'
+                  : 'app-subcard text-slate-400 hover:text-amber-400'
+              }">
+              <i data-lucide="${item.locked ? 'lock' : 'unlock'}" class="w-3.5 h-3.5"></i>
+            </button>
+            <div class="relative w-20">
+              <span class="absolute left-2 top-1/2 -translate-y-1/2 text-[11px] text-slate-500">₱</span>
+              <input type="text" value="${Number(item.weeklyAmount).toFixed(2)}"
+                ${item.locked ? 'disabled' : ''}
+                oninput="updateFixedItemAmountLive('${item.id}', this.value)"
+                onchange="updateFixedItemAmount('${item.id}', this.value)"
+                class="w-full pl-5 pr-1.5 py-1 rounded-lg app-input text-right text-xs font-bold mono-num disabled:opacity-60" />
+            </div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function toggleFixedItem(id) {
+      const item = appState.fixedItems.find(x => x.id === id);
+      if (item) {
+        item.enabled = !item.enabled;
+        renderFixedExpensesList();
+        recalculateBudget();
+        autoSaveCurrentWeek(true);
+        if (window.lucide) lucide.createIcons();
+      }
+    }
+
+    function toggleFixedItemLock(id) {
+      const item = appState.fixedItems.find(x => x.id === id);
+      if (item) {
+        item.locked = !item.locked;
+        renderFixedExpensesList();
+        autoSaveCurrentWeek(true);
+        if (window.lucide) lucide.createIcons();
+      }
+    }
+
+    function updateFixedItemAmountLive(id, valStr) {
+      const item = appState.fixedItems.find(x => x.id === id);
+      if (item && !item.locked) {
+        item.weeklyAmount = evaluateMathExpr(valStr);
+        recalculateBudget();
+        autoSaveCurrentWeek(false);
+      }
+    }
+
+    function updateFixedItemAmount(id, valStr) {
+      const item = appState.fixedItems.find(x => x.id === id);
+      if (item && !item.locked) {
+        item.weeklyAmount = evaluateMathExpr(valStr);
+        renderFixedExpensesList();
+        recalculateBudget();
+        autoSaveCurrentWeek(true);
+        if (window.lucide) lucide.createIcons();
+      }
+    }
+
+    function toggleDebtRowLock(provider) {
+      if (provider === 'spaylater') {
+        appState.spaylaterLocked = !appState.spaylaterLocked;
+      } else {
+        appState.sloanLocked = !appState.sloanLocked;
+      }
+      applyDebtRowLockUI();
+      autoSaveCurrentWeek();
+      if (window.lucide) lucide.createIcons();
+    }
+
+    function applyDebtRowLockUI() {
+      const spayBtn = document.getElementById('lock-btn-spaylater');
+      const spayInp = document.getElementById('fixed-spaylater');
+      if (spayBtn && spayInp) {
+        spayInp.disabled = !!appState.spaylaterLocked;
+        spayBtn.className = appState.spaylaterLocked
+          ? 'p-1.5 rounded-lg bg-amber-500/20 text-amber-400 border border-amber-500/40 transition'
+          : 'p-1.5 rounded-lg app-subcard text-slate-400 hover:text-amber-400 transition';
+        spayBtn.innerHTML = `<i data-lucide="${appState.spaylaterLocked ? 'lock' : 'unlock'}" class="w-3.5 h-3.5"></i>`;
+      }
+
+      const sloanBtn = document.getElementById('lock-btn-sloan');
+      const sloanInp = document.getElementById('fixed-sloan');
+      if (sloanBtn && sloanInp) {
+        sloanInp.disabled = !!appState.sloanLocked;
+        sloanBtn.className = appState.sloanLocked
+          ? 'p-1.5 rounded-lg bg-amber-500/20 text-amber-400 border border-amber-500/40 transition'
+          : 'p-1.5 rounded-lg app-subcard text-slate-400 hover:text-amber-400 transition';
+        sloanBtn.innerHTML = `<i data-lucide="${appState.sloanLocked ? 'lock' : 'unlock'}" class="w-3.5 h-3.5"></i>`;
+      }
+    }
+
+    function handleDebtInputOverride(provider, valStr) {
+      if (provider === 'spaylater' && !appState.spaylaterLocked) {
+        appState.spaylaterWeekly = evaluateMathExpr(valStr);
+      } else if (provider === 'sloan' && !appState.sloanLocked) {
+        appState.sloanWeekly = evaluateMathExpr(valStr);
+      }
+      recalculateBudget();
+      autoSaveCurrentWeek();
+    }
+
+    function syncLockedDebtsToAllocation(forceFromDebts = false) {
+      let spaySum = 0;
+      let spayDesc = [];
+      let sloanSum = 0;
+      let sloanDesc = [];
+
+      appState.debts.forEach(d => {
+        if (!d.paid && d.locked && isDebtInRange(d)) {
+          const stats = computeDebtStats(d);
+          if (d.provider === 'SPaylater') {
+            spaySum += stats.weeklyDivision;
+            spayDesc.push(`${formatCompactPHP(stats.deficit)} ÷ ${stats.weeksCount}w`);
+          } else if (d.provider === 'SLoan') {
+            sloanSum += stats.weeklyDivision;
+            sloanDesc.push(`${formatCompactPHP(stats.deficit)} ÷ ${stats.weeksCount}w`);
+          }
+        }
+      });
+
+      if (forceFromDebts || !appState.spaylaterLocked) {
+        appState.spaylaterWeekly = Math.round(spaySum * 100) / 100;
+      }
+      const spayInput = document.getElementById('fixed-spaylater');
+      const spayLabel = document.getElementById('spaylater-row-label');
+      if (spayInput) spayInput.value = Number(appState.spaylaterWeekly || 0).toFixed(2);
+      if (spayLabel) {
+        spayLabel.textContent = spayDesc.length > 0
+          ? `SPaylater (${spayDesc.join(' + ')})`
+          : 'SPaylater';
+      }
+
+      if (forceFromDebts || !appState.sloanLocked) {
+        appState.sloanWeekly = Math.round(sloanSum * 100) / 100;
+      }
+      const sloanInput = document.getElementById('fixed-sloan');
+      const sloanLabel = document.getElementById('sloan-row-label');
+      if (sloanInput) sloanInput.value = Number(appState.sloanWeekly || 0).toFixed(2);
+      if (sloanLabel) {
+        sloanLabel.textContent = sloanDesc.length > 0
+          ? `SLoan (${sloanDesc.join(' + ')})`
+          : 'SLoan';
+      }
+
+      const debtBankName = appState.debtBank || 'ShopeePay';
+      const debtBankClass = getBankPillClass(debtBankName);
+      const spayPill = document.getElementById('spaylater-bank-pill');
+      const sloanPill = document.getElementById('sloan-bank-pill');
+      if (spayPill) {
+        spayPill.textContent = debtBankName;
+        spayPill.className = `inline-block mt-0.5 px-2 py-0.2 rounded text-[10px] font-semibold ${debtBankClass}`;
+      }
+      if (sloanPill) {
+        sloanPill.textContent = debtBankName;
+        sloanPill.className = `inline-block mt-0.5 px-2 py-0.2 rounded text-[10px] font-semibold ${debtBankClass}`;
+      }
+
+      // Keep the active week's saved allocation snapshot in sync when debts change
+      if (forceFromDebts && Array.isArray(appState.savedAllocations)) {
+        const activeWeekId = `${appState.targetStartDate}_${appState.targetEndDate}`;
+        const snap = appState.savedAllocations.find(s => s.id === activeWeekId);
+        if (snap) {
+          snap.spaylaterWeekly = Number(appState.spaylaterWeekly) || 0;
+          snap.sloanWeekly = Number(appState.sloanWeekly) || 0;
+          snap.totalFixed = getTotalFixedWeekly();
+          const baseInc = Number(snap.baseIncome) || 0;
+          const extraInc = Number(snap.extraIncome) || 0;
+          const remainingBase = Math.max(0, Math.round((baseInc - snap.totalFixed) * 100) / 100);
+          snap.variableBreakdown = appState.variableCategories.map(cat => ({
+            ...cat,
+            baseAmt: (remainingBase * cat.pct) / 100,
+            extraAmt: (extraInc * cat.pct) / 100,
+            totalAmt: ((remainingBase + extraInc) * cat.pct) / 100
+          }));
+        }
+      }
+    }
+
+    function getTotalFixedWeekly() {
+      const recurring = appState.fixedItems
+        .filter(x => x.enabled)
+        .reduce((sum, item) => sum + (Number(item.weeklyAmount) || 0), 0);
+      return Math.round((recurring + (Number(appState.spaylaterWeekly) || 0) + (Number(appState.sloanWeekly) || 0)) * 100) / 100;
+    }
+
+    // ==================== RECALCULATE & RENDER VARIABLE / EXTRA ====================
+    function recalculateBudget() {
+      const baseInc = Number(appState.baseIncomeValue) || 0;
+      const extraInc = Number(appState.extraIncomeValue) || 0;
+      const totalIncome = baseInc + extraInc;
+      const totalFixed = getTotalFixedWeekly();
+      const remainingBase = Math.max(0, Math.round((baseInc - totalFixed) * 100) / 100);
+      const totalVariablePool = remainingBase + extraInc;
+
+      document.getElementById('base-income-total-display').textContent = formatPHP(baseInc);
+      document.getElementById('fixed-expenses-total').textContent = formatPHP(totalFixed);
+      document.getElementById('var-remaining-base').textContent = formatPHP(remainingBase);
+      document.getElementById('extra-pool-footer-total').textContent = formatPHP(extraInc);
+
+      document.getElementById('health-total-income').textContent = formatPHP(totalIncome);
+      document.getElementById('health-total-fixed').textContent = formatPHP(totalFixed);
+      document.getElementById('health-variable-pool').textContent = formatPHP(totalVariablePool);
+
+      const badge = document.getElementById('health-badge');
+      const msg = document.getElementById('health-message');
+
+      if (totalIncome <= 0) {
+        badge.textContent = 'No Income';
+        badge.className = 'px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-slate-500/20 text-slate-400';
+        msg.textContent = 'Select or enter your base weekly income to calculate allocations.';
+        document.getElementById('bar-fixed').style.width = '0%';
+        document.getElementById('bar-variable').style.width = '0%';
+        document.getElementById('bar-deficit').style.width = '0%';
+        document.getElementById('pct-fixed').textContent = '0%';
+        document.getElementById('pct-variable').textContent = '0%';
+        document.getElementById('health-ratio-label').textContent = '0% Allocated';
+      } else if (totalIncome < totalFixed) {
+        const deficit = totalFixed - totalIncome;
+        badge.textContent = `Deficit (-${formatPHP(deficit)})`;
+        badge.className = 'px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-rose-500/20 text-rose-400 border border-rose-500/30';
+        msg.textContent = `Fixed expenses exceed total income by ${formatPHP(deficit)}.`;
+        document.getElementById('bar-fixed').style.width = '80%';
+        document.getElementById('bar-variable').style.width = '0%';
+        document.getElementById('bar-deficit').style.width = '20%';
+        document.getElementById('pct-fixed').textContent = `${Math.round((totalFixed / totalIncome) * 100)}%`;
+        document.getElementById('pct-variable').textContent = '0%';
+        document.getElementById('health-ratio-label').textContent = 'Over Budget';
+      } else {
+        const fixedPct = Math.min(100, Math.round((totalFixed / totalIncome) * 100));
+        const varPct = 100 - fixedPct;
+        document.getElementById('bar-fixed').style.width = `${fixedPct}%`;
+        document.getElementById('bar-variable').style.width = `${varPct}%`;
+        document.getElementById('bar-deficit').style.width = '0%';
+        document.getElementById('pct-fixed').textContent = `${fixedPct}%`;
+        document.getElementById('pct-variable').textContent = `${varPct}%`;
+        document.getElementById('health-ratio-label').textContent = '100% Allocated';
+
+        badge.textContent = varPct >= 20 ? 'Healthy' : 'Tight Buffer';
+        badge.className = varPct >= 20
+          ? 'px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
+          : 'px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-500/15 text-amber-400 border border-amber-500/30';
+        msg.textContent = `${fixedPct}% goes to fixed bills & debts, leaving ${formatPHP(totalVariablePool)} (${varPct}%) for variable wallets.`;
+      }
+
+      document.getElementById('variable-allocation-list').innerHTML = appState.variableCategories.map(cat => {
+        const amt = (remainingBase * cat.pct) / 100;
+        return `
+          <div class="flex items-center justify-between gap-2 text-xs">
+            <div class="flex items-center gap-2 min-w-0">
+              <span class="w-2.5 h-2.5 rounded-full ${cat.dotColor || 'bg-blue-400'} shrink-0"></span>
+              <span class="font-medium truncate">${cat.name} <span style="color: var(--text-secondary)">(${cat.pct}%)</span></span>
+            </div>
+            <div class="flex items-center gap-2 shrink-0">
+              <span class="px-2 py-0.5 rounded-md text-[10px] font-semibold ${getBankPillClass(cat.bank)}">${cat.bank}</span>
+              <span class="w-20 text-right font-bold mono-num ${cat.id === 'cash_hold' ? 'text-emerald-400' : ''}">${formatPHP(amt)}</span>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      document.getElementById('extra-allocation-list').innerHTML = appState.variableCategories.map(cat => {
+        const amt = (extraInc * cat.pct) / 100;
+        return `
+          <div class="flex items-center justify-between gap-2 text-xs">
+            <span class="font-medium truncate">${cat.name} <span style="color: var(--text-secondary)">(${cat.pct}%)</span></span>
+            <div class="flex items-center gap-2 shrink-0">
+              <span class="px-2 py-0.5 rounded-md text-[10px] font-semibold ${getBankPillClass(cat.bank)}">${cat.bank}</span>
+              <span class="w-20 text-right font-bold mono-num ${cat.extraTextColor || 'text-emerald-400'}">${formatPHP(amt)}</span>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // ==================== SAVE & AUTO-SAVE ALLOCATION SNAPSHOT ====================
+    function autoSaveCurrentWeek(immediateCloud = false) {
+      if (isRestoringWeekState) return;
+      saveCurrentAllocation(true, immediateCloud);
+    }
+
+    function saveCurrentAllocation(silent = false, immediateCloud = true) {
+      const baseInc = Number(appState.baseIncomeValue) || 0;
+      const extraInc = Number(appState.extraIncomeValue) || 0;
+      const totalFixed = getTotalFixedWeekly();
+      const remainingBase = Math.max(0, Math.round((baseInc - totalFixed) * 100) / 100);
+
+      const targetMon = parseISODate(appState.targetStartDate);
+      const weekNum = getWeekNumber(targetMon);
+      const shortRange = `${formatShortDate(appState.targetStartDate)} - ${formatShortDate(appState.targetEndDate)}`;
+
+      const snapshot = {
+        id: `${appState.targetStartDate}_${appState.targetEndDate}`,
+        weekBadge: `Week ${weekNum} (${shortRange})`,
+        incomeStartDate: appState.incomeStartDate,
+        incomeEndDate: appState.incomeEndDate,
+        targetStartDate: appState.targetStartDate,
+        targetEndDate: appState.targetEndDate,
+        incomeRange: formatFullRange(appState.incomeStartDate, appState.incomeEndDate),
+        targetRange: formatFullRange(appState.targetStartDate, appState.targetEndDate),
+        activeIncomePresets: { ...appState.activeIncomePresets },
+        baseIncome: baseInc,
+        extraIncome: extraInc,
+        totalIncome: baseInc + extraInc,
+        totalFixed: totalFixed,
+        spaylaterWeekly: Number(appState.spaylaterWeekly) || 0,
+        sloanWeekly: Number(appState.sloanWeekly) || 0,
+        debtBank: appState.debtBank || 'ShopeePay',
+        fixedItems: JSON.parse(JSON.stringify(appState.fixedItems)),
+        variableBreakdown: appState.variableCategories.map(cat => ({
+          ...cat,
+          baseAmt: (remainingBase * cat.pct) / 100,
+          extraAmt: (extraInc * cat.pct) / 100,
+          totalAmt: ((remainingBase + extraInc) * cat.pct) / 100
+        }))
+      };
+
+      const idx = appState.savedAllocations.findIndex(s => s.id === snapshot.id);
+      if (idx >= 0) {
+        appState.savedAllocations[idx] = snapshot;
+      } else {
+        appState.savedAllocations.unshift(snapshot);
+      }
+
+      renderAllocationSavedWeeksBar();
+      renderSavedPage();
+      persistUserData(immediateCloud);
+      if (!silent) {
+        showToast(`Allocation saved for ${snapshot.weekBadge}!`);
+      }
+    }
+
+    // ==================== PAGE 2: DEBTS HELPERS ====================
+    function getActivePlanningCutoffDate() {
+      return appState.targetEndDate >= appState.selectedDate
+        ? appState.targetEndDate
+        : appState.selectedDate;
+    }
+
+    function isDebtInRange(debt) {
+      if (!debt || !debt.startDate) return true;
+      const cutoff = getActivePlanningCutoffDate();
+      return debt.startDate <= cutoff;
+    }
+
+    function computeDebtStats(debt) {
+      const totalBill = Number(debt.totalBill) || 0;
+      const cashSaved = Number(debt.cashSaved) || 0;
+      const deficit = Math.max(0, totalBill - cashSaved);
+
+      const start = parseISODate(debt.startDate);
+      const due = parseISODate(debt.dueDate);
+      const diffDays = Math.max(0, Math.round((due - start) / (1000 * 60 * 60 * 24)));
+      const weeksCount = Math.max(1, Math.floor(diffDays / 7));
+      const weeklyDivision = debt.paid ? 0 : Math.round((deficit / weeksCount) * 100) / 100;
+
+      const milestones = [];
+      const firstSat = new Date(start);
+      const daysUntilSat = (6 - firstSat.getDay() + 7) % 7 || 7;
+      firstSat.setDate(firstSat.getDate() + daysUntilSat);
+      for (let i = 0; i < weeksCount; i++) {
+        const d = new Date(firstSat);
+        d.setDate(firstSat.getDate() + i * 7);
+        milestones.push(d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+      }
+
+      const progressPct = totalBill > 0 ? Math.min(100, Math.round(((debt.paid ? totalBill : cashSaved) / totalBill) * 100)) : 0;
+      return { totalBill, cashSaved, deficit, weeksCount, weeklyDivision, milestones, progressPct };
+    }
+
+    function updateNewDebtPreview() {
+      const totalEl = document.getElementById('new-debt-total');
+      const savedEl = document.getElementById('new-debt-saved');
+      const startEl = document.getElementById('new-debt-start');
+      const dueEl = document.getElementById('new-debt-due');
+      if (!totalEl || !savedEl || !startEl || !dueEl) return;
+
+      const totalBill = evaluateMathExpr(totalEl.value);
+      const cashSaved = evaluateMathExpr(savedEl.value);
+      const startDate = startEl.value || appState.incomeStartDate;
+      const dueDate = dueEl.value || appState.targetEndDate;
+
+      const stats = computeDebtStats({ totalBill, cashSaved, startDate, dueDate, paid: false });
+      document.getElementById('new-debt-preview-desc').textContent = `Deficit ${formatCompactPHP(stats.deficit)} ÷ ${stats.weeksCount} wk${stats.weeksCount > 1 ? 's' : ''}`;
+      document.getElementById('new-debt-preview-weekly').textContent = `${formatPHP(stats.weeklyDivision)}/wk`;
+    }
+
+    function submitAdvanceDebt(lockImmediately) {
+      const provider = document.getElementById('new-debt-provider').value;
+      const label = document.getElementById('new-debt-label').value.trim() || `${provider} Bill`;
+      const totalBill = evaluateMathExpr(document.getElementById('new-debt-total').value);
+      const cashSaved = evaluateMathExpr(document.getElementById('new-debt-saved').value);
+      const startDate = document.getElementById('new-debt-start').value || appState.incomeStartDate;
+      const dueDate = document.getElementById('new-debt-due').value || appState.targetEndDate;
+
+      if (totalBill <= 0) {
+        showToast('Please enter a Total Bill amount greater than 0.');
+        return;
+      }
+
+      const newDebt = {
+        id: 'debt-' + Date.now(),
+        provider,
+        label,
+        totalBill,
+        cashSaved,
+        startDate,
+        dueDate,
+        locked: false,
+        paid: false
+      };
+
+      const inRange = isDebtInRange(newDebt);
+      if (lockImmediately && inRange) {
+        newDebt.locked = true;
+      }
+
+      appState.debts.push(newDebt);
+
+      // Reset form inputs back to empty with "0" placeholders
+      document.getElementById('new-debt-label').value = '';
+      document.getElementById('new-debt-total').value = '';
+      document.getElementById('new-debt-saved').value = '';
+      updateNewDebtPreview();
+
+      syncLockedDebtsToAllocation(true);
+      recalculateBudget();
+      renderDebtsPage();
+      renderSavedPage();
+      persistUserData();
+
+      if (lockImmediately && !inRange) {
+        showToast(`Saved in Staged! Locking unlocks on ${formatShortDate(startDate)}.`);
+      } else if (newDebt.locked) {
+        showToast(`${provider} added & locked to budget!`);
+      } else {
+        showToast(`${provider} saved to Staged / Unlocked!`);
+      }
+    }
+
+    function handleAddAdvanceDebt(e) {
+      e.preventDefault();
+      submitAdvanceDebt(false);
+    }
+
+    function updateStagedDebtField(id, field, rawVal, rerender = true) {
+      const d = appState.debts.find(x => x.id === id);
+      if (!d || d.locked || d.paid) return;
+
+      if (field === 'totalBill' || field === 'cashSaved') {
+        d[field] = evaluateMathExpr(rawVal);
+      } else {
+        d[field] = rawVal;
+      }
+
+      syncLockedDebtsToAllocation(true);
+      recalculateBudget();
+      if (rerender) {
+        renderDebtsPage();
+        renderSavedPage();
+      }
+      persistUserData(rerender);
+    }
+
+    function toggleStagedDebtAccordion(id) {
+      if (expandedStagedDebtIds.has(id)) {
+        expandedStagedDebtIds.delete(id);
+      } else {
+        expandedStagedDebtIds.add(id);
+      }
+      renderDebtsPage();
+    }
+
+    function sortDebtsByDueDateAsc(list) {
+      return [...list].sort((a, b) => {
+        if (!!a.paid !== !!b.paid) return a.paid ? 1 : -1;
+        const da = a.dueDate || '9999-12-31';
+        const db = b.dueDate || '9999-12-31';
+        if (da !== db) return da.localeCompare(db);
+        return (a.startDate || '').localeCompare(b.startDate || '');
+      });
+    }
+
+    function renderDebtItemCard(debt) {
+      const stats = computeDebtStats(debt);
+      const inRange = isDebtInRange(debt);
+      const isEditable = !debt.locked && !debt.paid;
+
+      // Staged / Unlocked Debts: Collapsed compact row by default to save space, expands on click
+      if (isEditable) {
+        const isExpanded = expandedStagedDebtIds.has(debt.id);
+        return `
+          <div class="app-subcard rounded-xl overflow-hidden border transition ${inRange ? 'border-transparent hover:border-blue-500/35' : 'border-blue-500/25'}">
+            <!-- Collapsed Compact Summary Header -->
+            <div onclick="toggleStagedDebtAccordion('${debt.id}')"
+              class="px-3 py-2.5 flex items-center justify-between gap-2 cursor-pointer">
+              <div class="flex items-center gap-2 min-w-0">
+                <span class="px-2 py-0.5 rounded text-[10px] font-bold shrink-0 ${inRange ? 'bg-amber-500/15 text-amber-400' : 'bg-blue-500/15 text-blue-400'}">
+                  Due ${formatShortDate(debt.dueDate)}
+                </span>
+                <span class="text-xs font-semibold truncate">${debt.label || debt.provider}</span>
+              </div>
+
+              <div class="flex items-center gap-1.5 shrink-0">
+                <span class="text-xs font-extrabold mono-num ${inRange ? 'text-amber-400' : 'text-slate-400'}">
+                  ${inRange ? `${formatPHP(stats.weeklyDivision)}/wk` : `Starts ${formatShortDate(debt.startDate)}`}
+                </span>
+                <button type="button" onclick="event.stopPropagation(); toggleDebtLock('${debt.id}')" ${!inRange ? 'disabled' : ''}
+                  title="${inRange ? 'Lock to Fixed Expenses' : `Unlocks on ${formatShortDate(debt.startDate)}`}"
+                  class="p-1 rounded-md transition ${
+                    inRange
+                      ? 'bg-blue-600/20 text-blue-400 hover:bg-blue-600 hover:text-white'
+                      : 'opacity-40 cursor-not-allowed text-slate-500'
+                  }">
+                  <i data-lucide="lock" class="w-3 h-3"></i>
+                </button>
+                <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}"></i>
+              </div>
+            </div>
+
+            <!-- Collapsible Inline Edit Details -->
+            <div class="accordion-content ${isExpanded ? 'open' : ''}">
+              <div class="accordion-inner">
+                <div class="px-3 pb-3 pt-2 border-t app-divider space-y-2.5">
+                  <div class="flex items-center gap-1.5">
+                    <select onchange="updateStagedDebtField('${debt.id}', 'provider', this.value, true)"
+                      class="px-2 py-1 rounded-md text-[11px] font-bold pill-shopeepay focus:outline-none">
+                      <option value="SPaylater" ${debt.provider === 'SPaylater' ? 'selected' : ''}>SPaylater</option>
+                      <option value="SLoan" ${debt.provider === 'SLoan' ? 'selected' : ''}>SLoan</option>
+                    </select>
+                    <input type="text" value="${debt.label || ''}" placeholder="Bill label"
+                      oninput="updateStagedDebtField('${debt.id}', 'label', this.value, false)"
+                      onchange="updateStagedDebtField('${debt.id}', 'label', this.value, true)"
+                      class="min-w-0 flex-1 px-2 py-1 rounded-lg app-input text-xs font-semibold" />
+                  </div>
+
+                  <div class="grid grid-cols-2 gap-2">
+                    <div>
+                      <label class="block text-[9px] uppercase tracking-wider mb-0.5" style="color: var(--text-muted)">Total Bill</label>
+                      <div class="relative">
+                        <span class="absolute left-2 top-1/2 -translate-y-1/2 text-[11px] text-slate-500">₱</span>
+                        <input type="text" value="${debt.totalBill}" placeholder="0"
+                          oninput="updateStagedDebtField('${debt.id}', 'totalBill', this.value, false)"
+                          onchange="updateStagedDebtField('${debt.id}', 'totalBill', this.value, true)"
+                          class="w-full pl-5 pr-2 py-1 rounded-lg app-input text-xs font-bold mono-num" />
+                      </div>
+                    </div>
+                    <div>
+                      <label class="block text-[9px] uppercase tracking-wider mb-0.5" style="color: var(--text-muted)">Cash Saved</label>
+                      <div class="relative">
+                        <span class="absolute left-2 top-1/2 -translate-y-1/2 text-[11px] text-slate-500">₱</span>
+                        <input type="text" value="${debt.cashSaved}" placeholder="0"
+                          oninput="updateStagedDebtField('${debt.id}', 'cashSaved', this.value, false)"
+                          onchange="updateStagedDebtField('${debt.id}', 'cashSaved', this.value, true)"
+                          class="w-full pl-5 pr-2 py-1 rounded-lg app-input text-xs font-bold text-emerald-400 mono-num" />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="grid grid-cols-2 gap-2">
+                    <div>
+                      <label class="block text-[9px] uppercase tracking-wider mb-0.5" style="color: var(--text-muted)">Start Date</label>
+                      <input type="date" value="${debt.startDate}"
+                        onchange="updateStagedDebtField('${debt.id}', 'startDate', this.value)"
+                        class="w-full px-2 py-1 rounded-lg app-input text-[11px] font-semibold" />
+                    </div>
+                    <div>
+                      <label class="block text-[9px] uppercase tracking-wider mb-0.5" style="color: var(--text-muted)">Due Date</label>
+                      <input type="date" value="${debt.dueDate}"
+                        onchange="updateStagedDebtField('${debt.id}', 'dueDate', this.value)"
+                        class="w-full px-2 py-1 rounded-lg app-input text-[11px] font-semibold" />
+                    </div>
+                  </div>
+
+                  <div class="text-[11px] flex items-center justify-between" style="color: var(--text-secondary)">
+                    <span>Deficit ${formatCompactPHP(stats.deficit)} &divide; ${stats.weeksCount}w (${formatPHP(stats.weeklyDivision)}/wk)</span>
+                    ${!inRange ? `<span class="px-1.5 py-0.5 rounded bg-blue-500/15 text-blue-400 text-[10px] font-semibold">Upcoming</span>` : ''}
+                  </div>
+
+                  <div class="w-full h-1.5 rounded-full overflow-hidden app-card">
+                    <div class="h-full bg-emerald-500 transition-all duration-300" style="width: ${stats.progressPct}%"></div>
+                  </div>
+
+                  <div class="flex items-center justify-between gap-1.5 pt-0.5">
+                    <span class="text-[10px]" style="color: var(--text-muted)">
+                      ${inRange ? `In range • Due ${formatShortDate(debt.dueDate)}` : `Reflects on ${formatShortDate(debt.startDate)}`}
+                    </span>
+                    <div class="flex items-center gap-1.5">
+                      <button type="button" onclick="toggleDebtLock('${debt.id}')" ${!inRange ? 'disabled' : ''}
+                        class="px-2.5 py-1 rounded-lg text-[11px] font-semibold flex items-center gap-1 transition ${
+                          inRange
+                            ? 'bg-blue-600 hover:bg-blue-500 text-white'
+                            : 'app-card opacity-45 cursor-not-allowed text-slate-400'
+                        }">
+                        <i data-lucide="lock" class="w-3 h-3"></i>
+                        <span>${inRange ? 'Lock' : `Starts ${formatShortDate(debt.startDate)}`}</span>
+                      </button>
+
+                      <button type="button" onclick="deleteDebtCard('${debt.id}')" title="Delete"
+                        class="p-1 rounded-lg text-slate-500 hover:text-rose-400 transition">
+                        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+      }
+
+      // Locked or Paid Debt Card (in Middle/Right SPaylater & SLoan Panels)
+      return `
+        <div class="app-subcard rounded-xl p-3.5 space-y-2.5 ${debt.paid ? 'opacity-55' : ''}">
+          <div class="flex items-start justify-between gap-2">
+            <div class="min-w-0">
+              <div class="text-xs font-bold truncate ${debt.paid ? 'line-through' : ''}">
+                ${debt.label || debt.provider}
+              </div>
+              <div class="text-[11px]" style="color: var(--text-secondary)">
+                ${formatCompactPHP(stats.deficit)} deficit &divide; ${stats.weeksCount}w (${stats.milestones.join(', ')})
+              </div>
+            </div>
+            <div class="text-right shrink-0">
+              <div class="text-sm font-extrabold ${inRange ? 'text-amber-400' : 'text-slate-400'} mono-num">
+                ${inRange ? formatPHP(stats.weeklyDivision) : '₱0.00'}
+              </div>
+              <div class="text-[9px]" style="color: var(--text-muted)">${inRange ? 'per week' : `starts ${formatShortDate(debt.startDate)}`}</div>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2 text-[11px]">
+            <div class="px-2 py-1 rounded-lg app-card flex items-center justify-between">
+              <span style="color: var(--text-muted)">Bill:</span>
+              <span class="font-bold mono-num">${formatCompactPHP(stats.totalBill)}</span>
+            </div>
+            <div class="px-2 py-1 rounded-lg app-card flex items-center justify-between">
+              <span style="color: var(--text-muted)">Saved:</span>
+              <span class="font-bold text-emerald-400 mono-num">${formatCompactPHP(stats.cashSaved)}</span>
+            </div>
+          </div>
+
+          <div class="w-full h-1.5 rounded-full overflow-hidden app-card">
+            <div class="h-full bg-emerald-500 transition-all duration-300" style="width: ${stats.progressPct}%"></div>
+          </div>
+
+          <div class="flex items-center justify-between gap-1.5 pt-0.5">
+            <span class="text-[10px]" style="color: var(--text-muted)">Due ${formatShortDate(debt.dueDate)}</span>
+            <div class="flex items-center gap-1.5">
+              <button type="button" onclick="toggleDebtLock('${debt.id}')" ${debt.paid ? 'disabled' : ''}
+                class="px-2 py-1 rounded-lg text-[11px] font-semibold flex items-center gap-1 transition bg-amber-500/20 text-amber-400 border border-amber-500/40 disabled:opacity-40">
+                <i data-lucide="unlock" class="w-3 h-3"></i>
+                <span>Unlock</span>
+              </button>
+
+              <button type="button" onclick="toggleDebtPaid('${debt.id}')"
+                class="px-2 py-1 rounded-lg text-[11px] font-semibold flex items-center gap-1 transition ${
+                  debt.paid
+                    ? 'bg-emerald-600 text-white'
+                    : 'app-card hover:border-emerald-500/40 text-emerald-400'
+                }">
+                <i data-lucide="check" class="w-3 h-3"></i>
+                <span>Paid</span>
+              </button>
+
+              <button type="button" onclick="deleteDebtCard('${debt.id}')" title="Delete"
+                class="p-1 rounded-lg text-slate-500 hover:text-rose-400 transition">
+                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderDebtsPage() {
+      const spayContainer = document.getElementById('debts-spaylater-list');
+      const spayStagedContainer = document.getElementById('debts-spaylater-staged-list');
+      const sloanContainer = document.getElementById('debts-sloan-list');
+      const sloanStagedContainer = document.getElementById('debts-sloan-staged-list');
+      if (!spayContainer || !spayStagedContainer || !sloanContainer || !sloanStagedContainer) return;
+
+      const spayLocked = sortDebtsByDueDateAsc(appState.debts.filter(d => d.provider === 'SPaylater' && (d.locked || d.paid)));
+      const spayStaged = sortDebtsByDueDateAsc(appState.debts.filter(d => d.provider === 'SPaylater' && !d.locked && !d.paid));
+
+      const sloanLocked = sortDebtsByDueDateAsc(appState.debts.filter(d => d.provider === 'SLoan' && (d.locked || d.paid)));
+      const sloanStaged = sortDebtsByDueDateAsc(appState.debts.filter(d => d.provider === 'SLoan' && !d.locked && !d.paid));
+
+      const spayWeeklyTotal = spayLocked
+        .filter(d => !d.paid && isDebtInRange(d))
+        .reduce((s, d) => s + computeDebtStats(d).weeklyDivision, 0);
+      document.getElementById('spaylater-panel-total').textContent = `${formatPHP(spayWeeklyTotal)}/wk`;
+      document.getElementById('spaylater-locked-count').textContent = spayLocked.length;
+      document.getElementById('spaylater-staged-count').textContent = spayStaged.length;
+
+      spayContainer.innerHTML = spayLocked.length > 0
+        ? spayLocked.map(renderDebtItemCard).join('')
+        : `<div class="text-xs text-center py-4 opacity-55">No locked SPaylater bills.</div>`;
+
+      spayStagedContainer.innerHTML = spayStaged.length > 0
+        ? spayStaged.map(renderDebtItemCard).join('')
+        : `<div class="text-[11px] text-center py-2.5 opacity-55">No staged SPaylater bills.</div>`;
+
+      const sloanWeeklyTotal = sloanLocked
+        .filter(d => !d.paid && isDebtInRange(d))
+        .reduce((s, d) => s + computeDebtStats(d).weeklyDivision, 0);
+      document.getElementById('sloan-panel-total').textContent = `${formatPHP(sloanWeeklyTotal)}/wk`;
+      document.getElementById('sloan-locked-count').textContent = sloanLocked.length;
+      document.getElementById('sloan-staged-count').textContent = sloanStaged.length;
+
+      sloanContainer.innerHTML = sloanLocked.length > 0
+        ? sloanLocked.map(renderDebtItemCard).join('')
+        : `<div class="text-xs text-center py-4 opacity-55">No locked SLoan bills.</div>`;
+
+      sloanStagedContainer.innerHTML = sloanStaged.length > 0
+        ? sloanStaged.map(renderDebtItemCard).join('')
+        : `<div class="text-[11px] text-center py-2.5 opacity-55">No staged SLoan bills.</div>`;
+
+      updateNewDebtPreview();
+      lucide.createIcons();
+    }
+
+    function deleteDebtCard(id) {
+      appState.debts = appState.debts.filter(d => d.id !== id);
+      syncLockedDebtsToAllocation(true);
+      recalculateBudget();
+      renderDebtsPage();
+      renderSavedPage();
+      persistUserData();
+    }
+
+    function toggleDebtLock(id) {
+      const d = appState.debts.find(x => x.id === id);
+      if (!d) return;
+
+      if (!d.locked && !isDebtInRange(d)) {
+        showToast(`Cannot lock yet — starts on ${formatShortDate(d.startDate)}.`);
+        return;
+      }
+
+      d.locked = !d.locked;
+      syncLockedDebtsToAllocation(true);
+      recalculateBudget();
+      renderDebtsPage();
+      renderSavedPage();
+      persistUserData();
+      showToast(d.locked ? `${d.provider} locked to budget!` : `${d.provider} moved to staged.`);
+    }
+
+    function toggleDebtPaid(id) {
+      const d = appState.debts.find(x => x.id === id);
+      if (d) {
+        d.paid = !d.paid;
+        if (d.paid) d.locked = false;
+        syncLockedDebtsToAllocation(true);
+        recalculateBudget();
+        renderDebtsPage();
+        renderSavedPage();
+        persistUserData();
+        showToast(d.paid ? `${d.provider} marked as paid!` : `${d.provider} reopened.`);
+      }
+    }
+
+    // ==================== PAGE 3: SAVED (COLLAPSIBLE BANK CARDS WITH LEFT-SIDE CHECKBOX) ====================
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        const pop = document.getElementById('header-cal-popover');
+        if (pop) pop.classList.add('hidden');
+      }
+    });
+
+    function onSavedWeekSelectorChange() {
+      renderSavedPage();
+      const selector = document.getElementById('saved-week-selector');
+      const activeIdx = Number(selector?.value) || 0;
+      const snap = appState.savedAllocations[activeIdx];
+      if (snap) {
+        applySnapshotToAllocation(snap);
+        refreshAllUI(true);
+        persistUserData();
+      }
+    }
+
+    function renderSavedPage() {
+      const selector = document.getElementById('saved-week-selector');
+      if (!selector) return;
+
+      if (appState.savedAllocations.length === 0) {
+        saveCurrentAllocation(true);
+      }
+
+      const prevIdx = selector.value;
+      selector.innerHTML = appState.savedAllocations.map((snap, idx) => `
+        <option value="${idx}" ${String(idx) === prevIdx ? 'selected' : ''} class="bg-slate-900 text-white">
+          ${snap.weekBadge}
+        </option>
+      `).join('');
+
+      const activeIdx = Number(selector.value) || 0;
+      const snap = appState.savedAllocations[activeIdx];
+      if (!snap) return;
+
+      // Group items per bank (dynamically includes all user-configured banks)
+      const configuredBankNames = appState.banks.map(b => b.name);
+      const bankMap = {};
+      configuredBankNames.forEach(b => { bankMap[b] = []; });
+
+      (snap.fixedItems || []).filter(it => it.enabled !== false).forEach(item => {
+        const b = item.bank || configuredBankNames[0] || 'MariBank';
+        if (!bankMap[b]) bankMap[b] = [];
+        bankMap[b].push({
+          label: item.name,
+          amount: Number(item.weeklyAmount) || 0
+        });
+      });
+
+      const debtBank = snap.debtBank || appState.debtBank || 'ShopeePay';
+      if (!bankMap[debtBank]) bankMap[debtBank] = [];
+      if (snap.spaylaterWeekly > 0) {
+        bankMap[debtBank].push({ label: 'SPaylater (Priority #1)', amount: Number(snap.spaylaterWeekly) || 0 });
+      }
+      if (snap.sloanWeekly > 0) {
+        bankMap[debtBank].push({ label: 'SLoan (Priority #1)', amount: Number(snap.sloanWeekly) || 0 });
+      }
+
+      (snap.variableBreakdown || []).forEach(v => {
+        const b = v.bank || configuredBankNames[0] || 'MariBank';
+        if (!bankMap[b]) bankMap[b] = [];
+        if (v.baseAmt > 0 || v.extraAmt === 0) {
+          bankMap[b].push({ label: `${v.name} (Base)`, amount: Number(v.baseAmt) || 0 });
+        }
+        if (v.extraAmt > 0) {
+          bankMap[b].push({ label: `${v.name} (Extra)`, amount: Number(v.extraAmt) || 0 });
+        }
+      });
+
+      let grandTotal = 0;
+      const entries = Object.entries(bankMap).filter(([, items]) => items.length > 0);
+      entries.forEach(([, items]) => {
+        grandTotal += items.reduce((s, it) => s + (Number(it.amount) || 0), 0);
+      });
+
+      const grandTotalEl = document.getElementById('saved-grand-total');
+      if (grandTotalEl) grandTotalEl.textContent = formatPHP(grandTotal);
+
+      const container = document.getElementById('bank-cards-container');
+      if (!container) return;
+
+      if (entries.length === 0) {
+        container.innerHTML = `<div class="col-span-full text-center py-8 text-xs opacity-60">No allocations recorded for this week yet.</div>`;
+        return;
+      }
+
+      container.innerHTML = entries.map(([bankName, items]) => {
+        const bankTotal = items.reduce((s, it) => s + (Number(it.amount) || 0), 0);
+        const checkKey = `${snap.id}_${bankName}`;
+        const isChecked = !!(appState.transferredChecklist && appState.transferredChecklist[checkKey]);
+        const safeBankArg = bankName.replace(/'/g, "\\'");
+
+        return `
+          <div class="app-subcard rounded-2xl overflow-hidden border transition ${isChecked ? 'border-emerald-500/40 opacity-75' : 'border-transparent hover:border-blue-500/35'}">
+            <div onclick="toggleBankCardAccordion(this)" class="p-4 flex items-center justify-between gap-3 cursor-pointer">
+              <div class="flex items-center gap-3 min-w-0">
+                <input type="checkbox" ${isChecked ? 'checked' : ''}
+                  onclick="event.stopPropagation(); toggleBankTransferCheck('${snap.id}', '${safeBankArg}')"
+                  title="Mark ${bankName} transfer complete"
+                  class="aesthetic-checkbox" />
+                <div class="min-w-0">
+                  <span class="inline-block px-2.5 py-0.5 rounded-md text-xs font-bold ${getBankPillClass(bankName)} ${isChecked ? 'line-through opacity-75' : ''}">
+                    ${bankName}
+                  </span>
+                  <div class="text-[11px] mt-1" style="color: var(--text-secondary)">
+                    ${items.length} item${items.length === 1 ? '' : 's'}
+                  </div>
+                </div>
+              </div>
+
+              <div class="flex items-center gap-2 shrink-0">
+                <span class="text-sm font-extrabold mono-num ${isChecked ? 'text-emerald-400 line-through' : ''}">
+                  ${formatPHP(bankTotal)}
+                </span>
+                <i data-lucide="chevron-down" class="bank-chevron w-4 h-4 text-slate-400 transition-transform duration-200 ${allBankCardsExpanded ? 'rotate-180' : ''}"></i>
+              </div>
+            </div>
+
+            <div class="bank-accordion accordion-content ${allBankCardsExpanded ? 'open' : ''}">
+              <div class="accordion-inner">
+                <div class="px-4 pb-4 pt-2 border-t app-divider space-y-2">
+                  ${items.map(it => `
+                    <div class="flex items-center justify-between gap-2 text-xs">
+                      <span class="truncate" style="color: var(--text-secondary)">${it.label}</span>
+                      <span class="font-bold mono-num shrink-0">${formatPHP(it.amount)}</span>
+                    </div>
+                  `).join('')}
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      if (window.lucide) lucide.createIcons();
+    }
+
+    function toggleBankCardAccordion(headerEl) {
+      const card = headerEl.closest('.app-subcard');
+      if (!card) return;
+      const content = card.querySelector('.bank-accordion');
+      const chevron = card.querySelector('.bank-chevron');
+      if (content) content.classList.toggle('open');
+      if (chevron) chevron.classList.toggle('rotate-180');
+    }
+
+    function toggleAllBankCards() {
+      allBankCardsExpanded = !allBankCardsExpanded;
+      const btn = document.getElementById('toggle-all-banks-btn');
+      if (btn) btn.textContent = allBankCardsExpanded ? 'Collapse All' : 'Expand All';
+      document.querySelectorAll('.bank-accordion').forEach(el => {
+        el.classList.toggle('open', allBankCardsExpanded);
+      });
+      document.querySelectorAll('.bank-chevron').forEach(el => {
+        el.classList.toggle('rotate-180', allBankCardsExpanded);
+      });
+    }
+
+    function toggleBankTransferCheck(snapId, bankName) {
+      if (!appState.transferredChecklist) appState.transferredChecklist = {};
+      const key = `${snapId}_${bankName}`;
+      appState.transferredChecklist[key] = !appState.transferredChecklist[key];
+      renderSavedPage();
+      persistUserData();
+    }
+
+    function loadSelectedSavedWeekToAllocation() {
+      const selector = document.getElementById('saved-week-selector');
+      const activeIdx = Number(selector?.value) || 0;
+      const snap = appState.savedAllocations[activeIdx];
+      if (!snap) return;
+      applySnapshotToAllocation(snap);
+      navigateTo('allocation');
+      refreshAllUI(true);
+      showToast(`Loaded ${snap.weekBadge} into Allocation!`);
+    }
+
+    // ==================== PAGE 4: SETUP (BANKS, FIXED, VARIABLE % & DEBT-FIRST PRIORITY) ====================
+    function buildBankOptionsHTML(selectedBank) {
+      return appState.banks.map(b => `
+        <option value="${b.name}" ${b.name === selectedBank ? 'selected' : ''} class="bg-slate-900 text-white">
+          ${b.name}
+        </option>
+      `).join('');
+    }
+
+    function syncSetupChangesToAllPages() {
+      syncLockedDebtsToAllocation(true);
+      renderFixedExpensesList();
+      recalculateBudget();
+      autoSaveCurrentWeek();
+      renderSavedPage();
+      renderSetupPage();
+    }
+
+    function renderSetupPage() {
+      const banksGrid = document.getElementById('setup-banks-grid');
+      if (!banksGrid) return;
+
+      const baseInc = Number(appState.baseIncomeValue) || 0;
+      const debtTotal = (Number(appState.spaylaterWeekly) || 0) + (Number(appState.sloanWeekly) || 0);
+      const recurringFixedTotal = appState.fixedItems
+        .filter(x => x.enabled)
+        .reduce((sum, item) => sum + (Number(item.weeklyAmount) || 0), 0);
+      const remainingVarPool = Math.max(0, Math.round((baseInc - debtTotal - recurringFixedTotal) * 100) / 100);
+
+      // Priority #1 -> #2 -> #3 waterfall metrics
+      document.getElementById('setup-priority-debt-amt').textContent = formatPHP(debtTotal);
+      document.getElementById('setup-priority-fixed-amt').textContent = formatPHP(recurringFixedTotal);
+      document.getElementById('setup-priority-var-amt').textContent = formatPHP(remainingVarPool);
+      document.getElementById('setup-fixed-subtotal').textContent = formatPHP(recurringFixedTotal);
+
+      const debtBankSelect = document.getElementById('setup-debt-bank-select');
+      if (debtBankSelect) {
+        debtBankSelect.innerHTML = buildBankOptionsHTML(appState.debtBank || 'ShopeePay');
+      }
+
+      const newFixedBankSelect = document.getElementById('setup-new-fixed-bank');
+      if (newFixedBankSelect) {
+        const prev = newFixedBankSelect.value;
+        newFixedBankSelect.innerHTML = buildBankOptionsHTML(prev || appState.banks[0]?.name || 'MariBank');
+      }
+
+      const newVarBankSelect = document.getElementById('setup-new-var-bank');
+      if (newVarBankSelect) {
+        const prev = newVarBankSelect.value;
+        newVarBankSelect.innerHTML = buildBankOptionsHTML(prev || appState.banks[0]?.name || 'MariBank');
+      }
+
+      // 1. Render Banks & Wallets Grid
+      banksGrid.innerHTML = appState.banks.map(bankObj => {
+        const fixedAssigned = appState.fixedItems.filter(f => f.bank === bankObj.name);
+        const varAssigned = appState.variableCategories.filter(v => v.bank === bankObj.name);
+        const isDebtBank = (appState.debtBank || 'ShopeePay') === bankObj.name;
+        const assignedCount = fixedAssigned.length + varAssigned.length + (isDebtBank ? 1 : 0);
+
+        const weeklyRouted =
+          fixedAssigned.filter(f => f.enabled).reduce((s, f) => s + (Number(f.weeklyAmount) || 0), 0) +
+          varAssigned.reduce((s, v) => s + ((remainingVarPool * (Number(v.pct) || 0)) / 100), 0) +
+          (isDebtBank ? debtTotal : 0);
+
+        return `
+          <div class="p-3 rounded-xl app-subcard flex items-center justify-between gap-2">
+            <div class="min-w-0">
+              <span class="inline-block px-2.5 py-0.5 rounded-md text-xs font-bold ${getBankPillClass(bankObj.name)}">
+                ${bankObj.name}
+              </span>
+              <div class="text-[11px] mt-1.5 flex items-center gap-2" style="color: var(--text-secondary)">
+                <span>${assignedCount} item${assignedCount === 1 ? '' : 's'}</span>
+                <span>&bull;</span>
+                <span class="font-bold mono-num">${formatPHP(weeklyRouted)}/wk</span>
+              </div>
+            </div>
+            ${appState.banks.length > 1 ? `
+              <button type="button" onclick="removeCustomBank('${bankObj.name.replace(/'/g, "\\'")}')" title="Remove Bank"
+                class="p-1.5 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 transition shrink-0">
+                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+              </button>
+            ` : ''}
+          </div>
+        `;
+      }).join('');
+
+      // 2. Render Fixed Weekly Expenses Editor List
+      const fixedListEl = document.getElementById('setup-fixed-list');
+      fixedListEl.innerHTML = appState.fixedItems.map(item => `
+        <div class="p-2.5 rounded-xl app-subcard grid grid-cols-1 sm:grid-cols-12 gap-2 items-center ${item.enabled ? '' : 'opacity-50'}">
+          <div class="sm:col-span-4 flex items-center gap-2 min-w-0">
+            <input type="checkbox" ${item.enabled ? 'checked' : ''}
+              onchange="updateFixedExpenseField('${item.id}', 'enabled', this.checked)"
+              class="aesthetic-checkbox" />
+            <input type="text" value="${item.name}"
+              onchange="updateFixedExpenseField('${item.id}', 'name', this.value)"
+              placeholder="Expense name"
+              class="w-full min-w-0 px-2.5 py-1 rounded-lg app-input text-xs font-semibold" />
+          </div>
+
+          <div class="sm:col-span-3">
+            <input type="text" value="${item.cycleLabel || ''}"
+              onchange="updateFixedExpenseField('${item.id}', 'cycleLabel', this.value)"
+              placeholder="Cycle note"
+              class="w-full px-2.5 py-1 rounded-lg app-input text-xs" />
+          </div>
+
+          <div class="sm:col-span-2 relative">
+            <span class="absolute left-2 top-1/2 -translate-y-1/2 text-[11px] text-slate-500">₱</span>
+            <input type="text" value="${Number(item.weeklyAmount).toFixed(2)}"
+              onchange="updateFixedExpenseField('${item.id}', 'weeklyAmount', this.value)"
+              class="w-full pl-5 pr-2 py-1 rounded-lg app-input text-right text-xs font-bold mono-num" />
+          </div>
+
+          <div class="sm:col-span-3 flex items-center gap-1.5">
+            <select onchange="updateFixedExpenseField('${item.id}', 'bank', this.value)"
+              class="flex-1 min-w-0 px-2 py-1 rounded-lg app-input text-xs font-semibold">
+              ${buildBankOptionsHTML(item.bank)}
+            </select>
+            <button type="button" onclick="deleteFixedExpense('${item.id}')" title="Delete Fixed Expense"
+              class="p-1.5 rounded-lg text-slate-500 hover:text-rose-400 transition shrink-0">
+              <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+            </button>
+          </div>
+        </div>
+      `).join('');
+
+      // 3. Render Variable Categories & Percentages Editor List
+      const totalPct = Math.round(appState.variableCategories.reduce((s, c) => s + (Number(c.pct) || 0), 0) * 100) / 100;
+      const pctBadge = document.getElementById('setup-var-pct-badge');
+      const autoBalBtn = document.getElementById('setup-autobalance-btn');
+
+      if (totalPct === 100) {
+        pctBadge.textContent = '100% Total';
+        pctBadge.className = 'px-2.5 py-1 rounded-full text-xs font-extrabold mono-num bg-emerald-500/15 text-emerald-400 border border-emerald-500/30';
+        autoBalBtn.classList.add('hidden');
+      } else {
+        pctBadge.textContent = `${totalPct}% / 100%`;
+        pctBadge.className = 'px-2.5 py-1 rounded-full text-xs font-extrabold mono-num bg-amber-500/20 text-amber-400 border border-amber-500/40';
+        autoBalBtn.classList.remove('hidden');
+      }
+
+      const varListEl = document.getElementById('setup-variable-list');
+      varListEl.innerHTML = appState.variableCategories.map(cat => {
+        const weeklyPesoPreview = (remainingVarPool * (Number(cat.pct) || 0)) / 100;
+        return `
+          <div class="p-2.5 rounded-xl app-subcard space-y-2">
+            <div class="flex items-center gap-2">
+              <span class="w-2.5 h-2.5 rounded-full ${cat.dotColor || 'bg-blue-400'} shrink-0"></span>
+              <input type="text" value="${cat.name}"
+                onchange="updateVariableCategoryField('${cat.id}', 'name', this.value)"
+                placeholder="Category name"
+                class="flex-1 min-w-0 px-2.5 py-1 rounded-lg app-input text-xs font-semibold" />
+              <div class="relative w-20 shrink-0">
+                <input type="number" min="0" max="100" step="1" value="${cat.pct}"
+                  onchange="updateVariableCategoryField('${cat.id}', 'pct', this.value)"
+                  class="w-full pl-2 pr-6 py-1 rounded-lg app-input text-right text-xs font-bold mono-num" />
+                <span class="absolute right-2 top-1/2 -translate-y-1/2 text-[11px] font-bold text-slate-400">%</span>
+              </div>
+              ${appState.variableCategories.length > 1 ? `
+                <button type="button" onclick="deleteVariableCategory('${cat.id}')" title="Delete Category"
+                  class="p-1 rounded-lg text-slate-500 hover:text-rose-400 transition shrink-0">
+                  <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                </button>
+              ` : ''}
+            </div>
+
+            <div class="flex items-center justify-between gap-2 pl-4">
+              <span class="text-[11px] font-semibold mono-num text-emerald-400">
+                = ${formatPHP(weeklyPesoPreview)}/wk
+              </span>
+              <select onchange="updateVariableCategoryField('${cat.id}', 'bank', this.value)"
+                class="w-36 px-2 py-1 rounded-lg app-input text-xs font-semibold">
+                ${buildBankOptionsHTML(cat.bank)}
+              </select>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      if (window.lucide) lucide.createIcons();
+    }
+
+    function addCustomBank(e) {
+      e.preventDefault();
+      const nameInput = document.getElementById('setup-new-bank-name');
+      const colorSelect = document.getElementById('setup-new-bank-color');
+      const bankName = nameInput.value.trim();
+      if (!bankName) return;
+
+      if (appState.banks.some(b => b.name.toLowerCase() === bankName.toLowerCase())) {
+        showToast(`${bankName} already exists!`);
+        return;
+      }
+
+      appState.banks.push({
+        name: bankName,
+        colorClass: colorSelect.value || 'pill-blue'
+      });
+      nameInput.value = '';
+      syncSetupChangesToAllPages();
+      showToast(`Added ${bankName} to your banks!`);
+    }
+
+    function removeCustomBank(bankName) {
+      if (appState.banks.length <= 1) return;
+      appState.banks = appState.banks.filter(b => b.name !== bankName);
+      const fallbackBank = appState.banks[0].name;
+
+      appState.fixedItems.forEach(f => {
+        if (f.bank === bankName) f.bank = fallbackBank;
+      });
+      appState.variableCategories.forEach(v => {
+        if (v.bank === bankName) v.bank = fallbackBank;
+      });
+      if (appState.debtBank === bankName) {
+        appState.debtBank = fallbackBank;
+      }
+
+      syncSetupChangesToAllPages();
+      showToast(`Removed ${bankName} (reassigned items to ${fallbackBank}).`);
+    }
+
+    function updateDebtAssignedBank(bankName) {
+      appState.debtBank = bankName;
+      syncSetupChangesToAllPages();
+      showToast(`Debts assigned to ${bankName}!`);
+    }
+
+    function addCustomFixedExpense(e) {
+      e.preventDefault();
+      const nameEl = document.getElementById('setup-new-fixed-name');
+      const cycleEl = document.getElementById('setup-new-fixed-cycle');
+      const amtEl = document.getElementById('setup-new-fixed-amount');
+      const bankEl = document.getElementById('setup-new-fixed-bank');
+
+      const name = nameEl.value.trim();
+      const weeklyAmount = evaluateMathExpr(amtEl.value);
+      if (!name || weeklyAmount <= 0) {
+        showToast('Enter an expense name and weekly amount greater than 0.');
+        return;
+      }
+
+      appState.fixedItems.push({
+        id: 'fixed-' + Date.now(),
+        name,
+        cycleLabel: cycleEl.value.trim() || `${formatCompactPHP(weeklyAmount)}/week`,
+        bank: bankEl.value || appState.banks[0]?.name || 'MariBank',
+        weeklyAmount,
+        enabled: true,
+        locked: false
+      });
+
+      nameEl.value = '';
+      cycleEl.value = '';
+      amtEl.value = '';
+      syncSetupChangesToAllPages();
+      showToast(`Added fixed expense: ${name}`);
+    }
+
+    function updateFixedExpenseField(id, field, val) {
+      const item = appState.fixedItems.find(x => x.id === id);
+      if (!item) return;
+
+      if (field === 'weeklyAmount') {
+        item.weeklyAmount = evaluateMathExpr(val);
+      } else if (field === 'enabled') {
+        item.enabled = !!val;
+      } else {
+        item[field] = String(val).trim() || item[field];
+      }
+      syncSetupChangesToAllPages();
+    }
+
+    function deleteFixedExpense(id) {
+      appState.fixedItems = appState.fixedItems.filter(x => x.id !== id);
+      syncSetupChangesToAllPages();
+      showToast('Fixed expense removed.');
+    }
+
+    function addCustomVariableCategory(e) {
+      e.preventDefault();
+      const nameEl = document.getElementById('setup-new-var-name');
+      const pctEl = document.getElementById('setup-new-var-pct');
+      const bankEl = document.getElementById('setup-new-var-bank');
+
+      const name = nameEl.value.trim();
+      const pct = Math.max(0, Math.min(100, Number(pctEl.value) || 0));
+      if (!name) return;
+
+      const dotColors = ['bg-cyan-400', 'bg-indigo-400', 'bg-rose-400', 'bg-amber-400', 'bg-emerald-400', 'bg-purple-400'];
+      const textColors = ['text-cyan-400', 'text-indigo-400', 'text-rose-400', 'text-amber-400', 'text-emerald-400', 'text-purple-400'];
+      const idx = appState.variableCategories.length % dotColors.length;
+
+      appState.variableCategories.push({
+        id: 'var-' + Date.now(),
+        name,
+        pct,
+        bank: bankEl.value || appState.banks[0]?.name || 'MariBank',
+        dotColor: dotColors[idx],
+        extraTextColor: textColors[idx]
+      });
+
+      nameEl.value = '';
+      pctEl.value = '';
+      syncSetupChangesToAllPages();
+      showToast(`Added variable category: ${name} (${pct}%)`);
+    }
+
+    function updateVariableCategoryField(id, field, val) {
+      const cat = appState.variableCategories.find(x => x.id === id);
+      if (!cat) return;
+
+      if (field === 'pct') {
+        cat.pct = Math.max(0, Math.min(100, Number(val) || 0));
+      } else {
+        cat[field] = String(val).trim() || cat[field];
+      }
+      syncSetupChangesToAllPages();
+    }
+
+    function deleteVariableCategory(id) {
+      if (appState.variableCategories.length <= 1) return;
+      appState.variableCategories = appState.variableCategories.filter(x => x.id !== id);
+      syncSetupChangesToAllPages();
+      showToast('Variable category removed.');
+    }
+
+    function autoBalanceVariablePercentages() {
+      const cats = appState.variableCategories;
+      if (!cats.length) return;
+      const sum = cats.reduce((s, c) => s + (Number(c.pct) || 0), 0);
+      if (sum <= 0) {
+        const even = Math.floor(100 / cats.length);
+        cats.forEach((c, i) => {
+          c.pct = i === cats.length - 1 ? 100 - even * (cats.length - 1) : even;
+        });
+      } else {
+        let running = 0;
+        cats.forEach((c, i) => {
+          if (i === cats.length - 1) {
+            c.pct = Math.max(0, Math.round((100 - running) * 100) / 100);
+          } else {
+            const scaled = Math.round(((Number(c.pct) || 0) / sum) * 100);
+            c.pct = scaled;
+            running += scaled;
+          }
+        });
+      }
+      syncSetupChangesToAllPages();
+      showToast('Variable percentages balanced to 100%!');
+    }
+
+    // ==================== TOAST & INIT ====================
+    let toastTimer = null;
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      document.getElementById('toast-message').textContent = msg;
+      toast.classList.remove('translate-y-20', 'opacity-0');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => {
+        toast.classList.add('translate-y-20', 'opacity-0');
+      }, 2500);
+    }
+
+    function refreshAllUI(skipDebtSync = false) {
+      if (!skipDebtSync) {
+        syncLockedDebtsToAllocation(true);
+      }
+
+      renderAllocationSavedWeeksBar();
+      renderIncomePresetButtons();
+      document.getElementById('base-income-single-input').value = appState.baseIncomeValue;
+      document.getElementById('extra-income-input').value = appState.extraIncomeValue > 0 ? appState.extraIncomeValue : '';
+
+      document.getElementById('fixed-spaylater').value = Number(appState.spaylaterWeekly || 0).toFixed(2);
+      document.getElementById('fixed-sloan').value = Number(appState.sloanWeekly || 0).toFixed(2);
+      applyDebtRowLockUI();
+
+      updateCalendarLabels();
+      renderCalendar();
+      renderFixedExpensesList();
+      recalculateBudget();
+      renderDebtsPage();
+      renderSavedPage();
+      renderSetupPage();
+      lucide.createIcons();
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      initTheme();
+      initUsers();
+      initPermanentFirebase();
+      lucide.createIcons();
+
+      const activeSession = getSavedDeviceSession();
+      if (activeSession) {
+        completeLogin(activeSession);
+      }
+    });
+  </script>
+</body>
+</html>
