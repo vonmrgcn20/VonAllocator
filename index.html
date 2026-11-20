@@ -1180,6 +1180,30 @@
 
           </div>
         </div>
+
+        <!-- ACCOUNT ACTIVITY LOG (CLOUD SYNCED PER ACCOUNT) -->
+        <div class="app-card rounded-2xl p-5 space-y-3">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div class="flex items-center gap-2.5">
+              <div class="w-8 h-8 rounded-lg bg-blue-500/15 text-blue-400 flex items-center justify-center shrink-0">
+                <i data-lucide="history" class="w-4 h-4"></i>
+              </div>
+              <div>
+                <h3 class="text-sm font-bold">Account Activity Log</h3>
+                <p class="text-[11px]" style="color: var(--text-secondary)">All inputs &amp; actions automatically saved to your account in Firebase</p>
+              </div>
+            </div>
+            <button type="button" onclick="manualCloudSync()"
+              class="px-3 py-1.5 rounded-lg app-subcard hover:border-blue-500/40 text-xs font-semibold flex items-center gap-1.5 transition">
+              <i data-lucide="refresh-cw" class="w-3.5 h-3.5 text-emerald-400"></i>
+              <span>Sync Now</span>
+            </button>
+          </div>
+
+          <div id="setup-activity-list" class="max-h-60 overflow-y-auto divide-y app-divider rounded-xl app-subcard px-3.5">
+            <!-- Rendered via JS -->
+          </div>
+        </div>
       </section>
 
     </main>
@@ -1193,13 +1217,58 @@
     </div>
   </div>
 
+  <!-- FIRESTORE RULES HELPER MODAL (SHOWN ONLY IF FIREBASE CONSOLE RULES BLOCK ACCESS) -->
+  <div id="firestore-rules-modal" class="hidden fixed inset-0 z-50 bg-black/65 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="app-card rounded-2xl max-w-lg w-full shadow-2xl overflow-hidden">
+      <div class="p-5 border-b app-divider flex items-center justify-between">
+        <div class="flex items-center gap-2.5">
+          <div class="w-8 h-8 rounded-lg bg-amber-500/15 text-amber-400 flex items-center justify-center">
+            <i data-lucide="shield-alert" class="w-4 h-4"></i>
+          </div>
+          <div>
+            <h3 class="text-sm font-bold">Enable Firestore Rules (budget-system-67273)</h3>
+            <p class="text-[11px]" style="color: var(--text-secondary)">Your data is safely saved locally. Update Firestore Rules to sync across devices.</p>
+          </div>
+        </div>
+        <button type="button" onclick="closeFirestoreRulesModal()" class="p-1.5 rounded-lg hover:bg-slate-500/15">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <div class="p-5 space-y-3 text-xs">
+        <p style="color: var(--text-secondary)">
+          In Firebase Console &rarr; <strong>Firestore Database &rarr; Rules</strong>, paste and publish these rules so your account documents can sync:
+        </p>
+        <pre id="firestore-rules-snippet" class="p-3 rounded-xl app-subcard font-mono text-[11px] overflow-x-auto text-emerald-400 select-all">rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /von_allocator_users/{userId}/{document=**} {
+      allow read, write: if true;
+    }
+    match /von_allocator_accounts/{userId} {
+      allow read, write: if true;
+    }
+  }
+}</pre>
+        <div class="flex items-center justify-end gap-2 pt-2">
+          <button type="button" onclick="copyFirestoreRulesSnippet()" class="px-3.5 py-2 rounded-xl app-subcard hover:border-blue-500/40 font-semibold">
+            Copy Rules
+          </button>
+          <button type="button" onclick="retryCloudConnection()" class="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold">
+            Retry Cloud Sync
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- ==================== FIREBASE SDK ==================== -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
     import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-    import { getFirestore, doc, setDoc, getDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { getFirestore, doc, setDoc, getDoc, onSnapshot, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-    window.__firebaseSDK = { initializeApp, getAuth, signInAnonymously, getFirestore, doc, setDoc, getDoc, onSnapshot };
+    window.__firebaseSDK = { initializeApp, getAuth, signInAnonymously, getFirestore, doc, setDoc, getDoc, onSnapshot, collection, addDoc };
   </script>
 
   <!-- ==================== MAIN APP SCRIPT ==================== -->
@@ -1216,8 +1285,8 @@
       projectId: "budget-system-67273",
       storageBucket: "budget-system-67273.firebasestorage.app",
       messagingSenderId: "134905640776",
-      appId: "1:134905640776:web:0a95c3017e182ece26a57d",
-      measurementId: "G-XM29EVDE1Q"
+      appId: "1:134905640776:web:b3d84989785a921f26a57d",
+      measurementId: "G-C62W4JSWZ1"
     };
 
     let authMode = 'login';
@@ -1225,10 +1294,16 @@
     let firestoreDB = null;
     let firebaseReadyPromise = null;
     let unsubscribeUserSnapshot = null;
+    let firestorePermissionDenied = false;
     let allBankCardsExpanded = false;
     let isRestoringWeekState = false;
     let hasCompletedInitialLoad = false;
     let cloudSaveDebounceTimer = null;
+
+    let pointerDownDate = null;
+    let dragCurrentStr = null;
+    let didDragRange = false;
+    let lastHandledPointerTs = 0;
 
     // Default Banks & Wallets
     const DEFAULT_BANKS = [
@@ -1241,22 +1316,7 @@
       { name: 'ShopeePay', pillClass: 'pill-shopeepay' }
     ];
 
-    function getBankPillClass(bankName) {
-      const configured = (appState.banks || DEFAULT_BANKS).find(
-        b => b.name.toLowerCase() === (bankName || '').toLowerCase()
-      );
-      if (configured && configured.pillClass) return configured.pillClass;
-
-      const b = (bankName || '').toLowerCase();
-      if (b.includes('maribank')) return 'pill-maribank';
-      if (b.includes('tonik')) return 'pill-tonik';
-      if (b.includes('maya')) return 'pill-maya';
-      if (b.includes('gotyme')) return 'pill-gotyme';
-      if (b.includes('cimb')) return 'pill-cimb';
-      if (b.includes('shopee')) return 'pill-shopeepay';
-      return 'pill-blue';
-    }
-
+    // Default Fixed Weekly Expenses
     const DEFAULT_FIXED_ITEMS = [
       { id: 'internet', name: 'Internet Bill', cycleLabel: '125/week', bank: 'CIMB', weeklyAmount: 125.00, enabled: true, locked: false },
       { id: 'bigas', name: 'Bigas', cycleLabel: '120/week', bank: 'Maribank Francis', weeklyAmount: 120.00, enabled: true, locked: false },
@@ -1264,16 +1324,17 @@
       { id: 'gas', name: 'Gas', cycleLabel: '200/10 days', bank: 'MariBank', weeklyAmount: 140.00, enabled: true, locked: false },
       { id: 'change_oil', name: 'Change Oil', cycleLabel: '420/2 mos', bank: 'GoTyme', weeklyAmount: 49.00, enabled: true, locked: false },
       { id: 'motor_reg', name: 'Motor Registration', cycleLabel: '2,500/yearly', bank: 'GoTyme', weeklyAmount: 48.08, enabled: true, locked: false },
-      { id: 'savings', name: 'Savings', cycleLabel: '200/week', bank: 'MariBank', weeklyAmount: 200.00, enabled: true, locked: false },
+      { id: 'savings', name: 'Savings', cycleLabel: '200/week', bank: 'MariBank', weeklyAmount: 200.00, enabled: true, locked: false }
     ];
 
+    // Default Variable Categories & Splits
     const DEFAULT_VARIABLE_CATEGORIES = [
       { id: 'food', name: 'Food', pct: 50, bank: 'MariBank', dotColor: 'bg-orange-400', extraTextColor: 'text-orange-400' },
       { id: 'personal', name: 'Personal', pct: 20, bank: 'Tonik', dotColor: 'bg-purple-400', extraTextColor: 'text-purple-400' },
       { id: 'cash_hold', name: 'Cash Hold', pct: 10, bank: 'Maya', dotColor: 'bg-emerald-400', extraTextColor: 'text-emerald-400' },
       { id: 'sports', name: 'Sports', pct: 5, bank: 'Tonik', dotColor: 'bg-blue-400', extraTextColor: 'text-blue-400' },
       { id: 'school', name: 'School', pct: 5, bank: 'Tonik', dotColor: 'bg-amber-400', extraTextColor: 'text-amber-400' },
-      { id: 'wants', name: 'Wants', pct: 10, bank: 'Maya', dotColor: 'bg-pink-400', extraTextColor: 'text-pink-400' },
+      { id: 'wants', name: 'Wants', pct: 10, bank: 'Maya', dotColor: 'bg-pink-400', extraTextColor: 'text-pink-400' }
     ];
 
     const INCOME_PRESETS = [
@@ -1300,12 +1361,12 @@
         baseIncomeValue: 1300,
         extraIncomeExpr: '',
         extraIncomeValue: 0,
-        banks: JSON.parse(JSON.stringify(DEFAULT_BANKS)),
         debtBank: 'ShopeePay',
         spaylaterWeekly: 367.50,
         sloanWeekly: 0,
         spaylaterLocked: false,
         sloanLocked: false,
+        banks: JSON.parse(JSON.stringify(DEFAULT_BANKS)),
         fixedItems: JSON.parse(JSON.stringify(DEFAULT_FIXED_ITEMS)),
         variableCategories: JSON.parse(JSON.stringify(DEFAULT_VARIABLE_CATEGORIES)),
         debts: [
@@ -1334,31 +1395,34 @@
         ],
         savedAllocations: [],
         transferredChecklist: {},
+        activityLog: [],
         updatedAt: 0,
-        lastEditorClientId: DEVICE_CLIENT_ID
+        lastEditorClientId: ''
       };
     }
 
     let appState = createDefaultAppState();
 
-    // Pointer state for calendar clicks & drags
-    let pointerDownDate = null;
-    let dragCurrentStr = null;
-    let didDragRange = false;
-    let lastHandledPointerTs = 0;
-
-    // ==================== THEME ====================
+    // ==================== THEME (DARK MODE PRIMARY + TOP-RIGHT LIGHT MODE TOGGLE) ====================
     function initTheme() {
-      const savedTheme = localStorage.getItem(STORAGE_KEY_THEME) || 'dark';
+      let savedTheme = 'dark';
+      try {
+        savedTheme = localStorage.getItem(STORAGE_KEY_THEME) || 'dark';
+      } catch (e) {}
       applyTheme(savedTheme);
     }
 
     function applyTheme(mode) {
       const html = document.documentElement;
       const isDark = mode === 'dark';
-      if (isDark) html.classList.add('dark');
-      else html.classList.remove('dark');
-      localStorage.setItem(STORAGE_KEY_THEME, mode);
+      if (isDark) {
+        html.classList.add('dark');
+      } else {
+        html.classList.remove('dark');
+      }
+      try {
+        localStorage.setItem(STORAGE_KEY_THEME, mode);
+      } catch (e) {}
 
       const iconName = isDark ? 'sun' : 'moon';
       const labelText = isDark ? 'Light' : 'Dark';
@@ -1388,7 +1452,7 @@
       applyTheme(isCurrentlyDark ? 'light' : 'dark');
     }
 
-    // ==================== MATH PARSER & FORMATTING ====================
+    // ==================== MATH EVALUATOR & BANK PILL HELPER ====================
     function evaluateMathExpr(raw) {
       if (raw === null || raw === undefined) return 0;
       const cleaned = String(raw).replace(/[₱,\s]/g, '');
@@ -1408,6 +1472,22 @@
       } catch (e) {
         return 0;
       }
+    }
+
+    function getBankPillClass(bankName) {
+      const found = (appState.banks || DEFAULT_BANKS).find(
+        b => b.name.toLowerCase() === (bankName || '').toLowerCase()
+      );
+      if (found && found.pillClass) return found.pillClass;
+
+      const lower = (bankName || '').toLowerCase();
+      if (lower.includes('maribank')) return 'pill-maribank';
+      if (lower.includes('tonik')) return 'pill-tonik';
+      if (lower.includes('maya')) return 'pill-maya';
+      if (lower.includes('gotyme')) return 'pill-gotyme';
+      if (lower.includes('cimb')) return 'pill-cimb';
+      if (lower.includes('shopee')) return 'pill-shopeepay';
+      return 'pill-blue';
     }
 
     function formatPHP(num) {
@@ -1479,7 +1559,7 @@
 
     async function syncAccountToCloud(username, password) {
       if (firebaseReadyPromise) await firebaseReadyPromise;
-      if (!firestoreDB || !window.__firebaseSDK) return;
+      if (!firestoreDB || !window.__firebaseSDK || firestorePermissionDenied) return;
       try {
         const { doc, setDoc } = window.__firebaseSDK;
         await setDoc(doc(firestoreDB, 'von_allocator_accounts', username), {
@@ -1487,17 +1567,21 @@
           password,
           updatedAt: Date.now()
         }, { merge: true });
-      } catch (e) {}
+      } catch (e) {
+        if (e?.code === 'permission-denied') handleFirestorePermissionDenied();
+      }
     }
 
     async function fetchCloudAccount(username) {
       if (firebaseReadyPromise) await firebaseReadyPromise;
-      if (!firestoreDB || !window.__firebaseSDK) return null;
+      if (!firestoreDB || !window.__firebaseSDK || firestorePermissionDenied) return null;
       try {
         const { doc, getDoc } = window.__firebaseSDK;
         const snap = await getDoc(doc(firestoreDB, 'von_allocator_accounts', username));
         if (snap.exists()) return snap.data();
-      } catch (e) {}
+      } catch (e) {
+        if (e?.code === 'permission-denied') handleFirestorePermissionDenied();
+      }
       return null;
     }
 
@@ -1582,6 +1666,7 @@
         loadWeekAllocationIfSaved(appState.targetStartDate, appState.targetEndDate, true);
       }
 
+      recordAccountActivity('Account', `Logged in as ${username}`, true);
       refreshAllUI(true);
       setupRealtimeCloudListener(username);
     }
@@ -1625,192 +1710,241 @@
           : [],
         transferredChecklist: rawObj.transferredChecklist && typeof rawObj.transferredChecklist === 'object'
           ? rawObj.transferredChecklist
-          : {}
+          : {},
+        activityLog: Array.isArray(rawObj.activityLog)
+          ? rawObj.activityLog
+          : []
       };
     }
 
-    function setSyncIndicator(state, label) {
-      const dot = document.getElementById('fb-status-dot');
-      const txt = document.getElementById('fb-status-text');
-      const pillText = document.getElementById('autosave-status-text');
-      if (dot) {
-        dot.className = state === 'synced'
-          ? 'w-2 h-2 rounded-full bg-emerald-400 shrink-0 ml-1'
-          : state === 'syncing'
-            ? 'w-2 h-2 rounded-full bg-blue-400 animate-pulse shrink-0 ml-1'
-            : 'w-2 h-2 rounded-full bg-amber-400 shrink-0 ml-1';
+    function recordAccountActivity(category, description, flushImmediately = false) {
+      if (!currentUser || !hasCompletedInitialLoad || isRestoringWeekState) return;
+      if (!Array.isArray(appState.activityLog)) appState.activityLog = [];
+
+      const now = new Date();
+      const timeLabel = now.toLocaleString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit'
+      });
+
+      const entry = {
+        id: 'act_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+        category,
+        description,
+        timeLabel,
+        timestamp: Date.now(),
+        deviceId: DEVICE_CLIENT_ID
+      };
+
+      appState.activityLog.unshift(entry);
+      if (appState.activityLog.length > 100) {
+        appState.activityLog = appState.activityLog.slice(0, 100);
       }
-      if (txt && label) txt.textContent = label;
-      if (pillText) {
-        pillText.textContent = state === 'syncing' ? 'Syncing...' : 'Auto-Saved';
+
+      renderActivityLog();
+
+      // Also append an immutable log document under the specific account in Firestore
+      if (firestoreDB && !firestorePermissionDenied && window.__firebaseSDK && window.__firebaseSDK.collection && window.__firebaseSDK.addDoc) {
+        try {
+          const { collection, addDoc } = window.__firebaseSDK;
+          addDoc(collection(firestoreDB, 'von_allocator_users', currentUser, 'activity_logs'), entry).catch((err) => {
+            if (err?.code === 'permission-denied') handleFirestorePermissionDenied();
+          });
+        } catch (e) {}
+      }
+
+      if (flushImmediately) {
+        clearTimeout(cloudSaveDebounceTimer);
+        persistUserData(true);
+      } else {
+        scheduleCloudSave();
       }
     }
 
-    function buildFirestoreSafePayload() {
-      const cleanObj = JSON.parse(JSON.stringify(appState));
-      cleanObj.updatedAt = Date.now();
-      cleanObj.lastEditorClientId = DEVICE_CLIENT_ID;
-      appState.updatedAt = cleanObj.updatedAt;
-      appState.lastEditorClientId = DEVICE_CLIENT_ID;
-      return cleanObj;
+    function renderActivityLog() {
+      const listEl = document.getElementById('setup-activity-list');
+      if (!listEl) return;
+
+      const logs = Array.isArray(appState.activityLog) ? appState.activityLog : [];
+      if (logs.length === 0) {
+        listEl.innerHTML = `<div class="py-6 text-center text-xs opacity-60">No recorded activity yet.</div>`;
+        return;
+      }
+
+      listEl.innerHTML = logs.slice(0, 40).map(item => `
+        <div class="py-2.5 flex items-center justify-between gap-3 text-xs">
+          <div class="flex items-center gap-2.5 min-w-0">
+            <span class="px-2 py-0.5 rounded-md bg-blue-500/15 text-blue-400 text-[10px] font-bold shrink-0">
+              ${item.category || 'Activity'}
+            </span>
+            <span class="truncate font-medium">${item.description}</span>
+          </div>
+          <span class="text-[11px] shrink-0 mono-num" style="color: var(--text-muted)">
+            ${item.timeLabel || ''}
+          </span>
+        </div>
+      `).join('');
     }
 
+    // ==================== CLOUD & LOCAL STORAGE PERSISTENCE ====================
     async function loadUserData(username) {
-      let localData = null;
+      let localParsed = null;
       try {
         const savedLocal = localStorage.getItem(getUserStorageKey(username));
-        if (savedLocal) {
-          localData = JSON.parse(savedLocal);
-          mergeLoadedUserState(localData);
-        }
+        if (savedLocal) localParsed = JSON.parse(savedLocal);
       } catch (e) {}
 
-      setSyncIndicator('syncing', 'Loading Cloud...');
+      if (localParsed) {
+        mergeLoadedUserState(localParsed);
+      }
 
       if (firebaseReadyPromise) {
         await firebaseReadyPromise;
       }
 
-      if (firestoreDB && window.__firebaseSDK) {
+      if (firestoreDB && !firestorePermissionDenied && window.__firebaseSDK) {
         try {
           const { doc, getDoc } = window.__firebaseSDK;
-          const primaryRef = doc(firestoreDB, 'von_allocator_users', username);
-          let snap = await getDoc(primaryRef);
-
-          if (!snap.exists()) {
-            const legacyRef = doc(firestoreDB, 'artifacts', 'budget-system-67273', 'public', 'data', 'von_allocator_users', username);
-            snap = await getDoc(legacyRef);
-          }
-
+          const snap = await getDoc(doc(firestoreDB, 'von_allocator_users', username));
           if (snap.exists()) {
             const cloudData = snap.data();
             const cloudTs = Number(cloudData.updatedAt) || 0;
-            const localTs = Number(localData?.updatedAt) || 0;
-
-            if (!localData || cloudTs >= localTs) {
+            const localTs = Number(localParsed?.updatedAt) || 0;
+            if (!localParsed || cloudTs >= localTs) {
               mergeLoadedUserState(cloudData);
               try {
                 localStorage.setItem(getUserStorageKey(username), JSON.stringify(appState));
               } catch (e) {}
-            } else {
-              await writePayloadToFirestore(username, buildFirestoreSafePayload());
             }
-          } else if (localData) {
-            await writePayloadToFirestore(username, buildFirestoreSafePayload());
           }
-
-          setSyncIndicator('synced', 'Cloud Synced');
-          return;
         } catch (err) {
-          console.warn('Firebase fetch fallback:', err);
+          if (err?.code === 'permission-denied') {
+            handleFirestorePermissionDenied();
+          }
         }
       }
-
-      setSyncIndicator('local', 'Local Backup');
     }
 
-    async function setupRealtimeCloudListener(username) {
+    function handleFirestorePermissionDenied() {
+      firestorePermissionDenied = true;
       if (unsubscribeUserSnapshot) {
         unsubscribeUserSnapshot();
         unsubscribeUserSnapshot = null;
       }
-      if (firebaseReadyPromise) await firebaseReadyPromise;
-      if (!firestoreDB || !window.__firebaseSDK || !window.__firebaseSDK.onSnapshot) return;
-
-      try {
-        const { doc, onSnapshot } = window.__firebaseSDK;
-        const userDocRef = doc(firestoreDB, 'von_allocator_users', username);
-        unsubscribeUserSnapshot = onSnapshot(userDocRef, (snap) => {
-          if (!snap.exists() || !hasCompletedInitialLoad) return;
-          const cloudData = snap.data();
-          if (cloudData.lastEditorClientId === DEVICE_CLIENT_ID) return;
-
-          const cloudTs = Number(cloudData.updatedAt) || 0;
-          const currentTs = Number(appState.updatedAt) || 0;
-          if (cloudTs > currentTs) {
-            mergeLoadedUserState(cloudData);
-            try {
-              localStorage.setItem(getUserStorageKey(username), JSON.stringify(appState));
-            } catch (e) {}
-            loadWeekAllocationIfSaved(appState.targetStartDate, appState.targetEndDate, true);
-            refreshAllUI(true);
-            setSyncIndicator('synced', 'Cloud Synced');
-          }
-        }, (err) => {
-          console.warn('Realtime sync listener warning:', err);
-        });
-      } catch (e) {}
+      updateSyncStatusBadge('local', 'Local Mode (Rules)');
     }
 
-    async function writePayloadToFirestore(username, payload) {
-      if (!firestoreDB || !window.__firebaseSDK) return false;
-      const { doc, setDoc } = window.__firebaseSDK;
-      const primaryRef = doc(firestoreDB, 'von_allocator_users', username);
-      await setDoc(primaryRef, payload);
-      return true;
+    function updateSyncStatusBadge(state, label) {
+      const dot = document.getElementById('fb-status-dot');
+      const txt = document.getElementById('fb-status-text');
+      const autoText = document.getElementById('autosave-status-text');
+
+      if (dot) {
+        dot.className = state === 'synced'
+          ? 'w-2 h-2 rounded-full bg-emerald-400 shrink-0 ml-1'
+          : state === 'saving'
+            ? 'w-2 h-2 rounded-full bg-blue-400 animate-pulse shrink-0 ml-1'
+            : 'w-2 h-2 rounded-full bg-amber-400 shrink-0 ml-1';
+      }
+      if (txt) txt.textContent = label;
+      if (autoText) {
+        autoText.textContent = state === 'saving' ? 'Saving...' : 'Auto-Saved';
+      }
     }
 
-    async function persistUserData(silent = true) {
+    async function persistUserData(forceCloud = false) {
       if (!currentUser || !hasCompletedInitialLoad) return;
 
-      const payload = buildFirestoreSafePayload();
+      appState.updatedAt = Date.now();
+      appState.lastEditorClientId = DEVICE_CLIENT_ID;
 
       try {
-        localStorage.setItem(getUserStorageKey(currentUser), JSON.stringify(payload));
+        localStorage.setItem(getUserStorageKey(currentUser), JSON.stringify(appState));
       } catch (e) {}
 
       if (firebaseReadyPromise) {
         await firebaseReadyPromise;
       }
 
-      if (firestoreDB && window.__firebaseSDK) {
-        setSyncIndicator('syncing', 'Syncing...');
+      if (firestoreDB && !firestorePermissionDenied && window.__firebaseSDK) {
         try {
-          await writePayloadToFirestore(currentUser, payload);
-          setSyncIndicator('synced', 'Cloud Synced');
-          if (!silent) showToast('Saved to Firebase Cloud!');
-          return;
+          updateSyncStatusBadge('saving', 'Syncing...');
+          const { doc, setDoc } = window.__firebaseSDK;
+          const cleanPayload = JSON.parse(JSON.stringify(appState));
+          await setDoc(doc(firestoreDB, 'von_allocator_users', currentUser), cleanPayload, { merge: true });
+          updateSyncStatusBadge('synced', 'Cloud Synced');
         } catch (err) {
-          console.warn('Firebase save error:', err);
-          setSyncIndicator('local', 'Sync Retry');
-          if (!silent) showToast('Cloud sync failed — saved locally.');
+          if (err?.code === 'permission-denied') {
+            handleFirestorePermissionDenied();
+          } else {
+            updateSyncStatusBadge('local', 'Saved Locally');
+          }
         }
+      } else {
+        updateSyncStatusBadge('local', firestorePermissionDenied ? 'Local Mode (Rules)' : 'Saved Locally');
       }
     }
 
     function scheduleCloudSave() {
       if (!currentUser || !hasCompletedInitialLoad) return;
-      const payload = buildFirestoreSafePayload();
       try {
-        localStorage.setItem(getUserStorageKey(currentUser), JSON.stringify(payload));
+        localStorage.setItem(getUserStorageKey(currentUser), JSON.stringify(appState));
       } catch (e) {}
 
-      setSyncIndicator('syncing', 'Syncing...');
+      updateSyncStatusBadge('saving', 'Syncing...');
       clearTimeout(cloudSaveDebounceTimer);
       cloudSaveDebounceTimer = setTimeout(() => {
-        persistUserData(true);
-      }, 350);
+        persistUserData(false);
+      }, 450);
     }
 
-    document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'hidden' && currentUser && hasCompletedInitialLoad) {
-        clearTimeout(cloudSaveDebounceTimer);
-        persistUserData(true);
+    function setupRealtimeCloudListener(username) {
+      if (unsubscribeUserSnapshot) {
+        unsubscribeUserSnapshot();
+        unsubscribeUserSnapshot = null;
       }
-    });
+      if (!firestoreDB || firestorePermissionDenied || !window.__firebaseSDK || !window.__firebaseSDK.onSnapshot) return;
 
-    window.addEventListener('beforeunload', () => {
-      if (currentUser && hasCompletedInitialLoad) {
-        persistUserData(true);
+      try {
+        const { doc, onSnapshot } = window.__firebaseSDK;
+        unsubscribeUserSnapshot = onSnapshot(
+          doc(firestoreDB, 'von_allocator_users', username),
+          (snap) => {
+            if (!snap.exists()) return;
+            const data = snap.data();
+            if (data.lastEditorClientId === DEVICE_CLIENT_ID) return;
+
+            const incomingTs = Number(data.updatedAt) || 0;
+            const currentTs = Number(appState.updatedAt) || 0;
+            if (incomingTs > currentTs) {
+              mergeLoadedUserState(data);
+              try {
+                localStorage.setItem(getUserStorageKey(username), JSON.stringify(appState));
+              } catch (e) {}
+              refreshAllUI(true);
+              updateSyncStatusBadge('synced', 'Synced Across Devices');
+            }
+          },
+          (err) => {
+            if (err?.code === 'permission-denied') {
+              handleFirestorePermissionDenied();
+            } else {
+              updateSyncStatusBadge('local', 'Saved Locally');
+            }
+          }
+        );
+      } catch (err) {
+        updateSyncStatusBadge('local', 'Saved Locally');
       }
-    });
+    }
 
-    // ==================== PERMANENT FIREBASE INIT ====================
     function initPermanentFirebase() {
       firebaseReadyPromise = new Promise((resolve) => {
         const tryConnect = async () => {
           if (!window.__firebaseSDK) {
-            setTimeout(tryConnect, 120);
+            setTimeout(tryConnect, 150);
             return;
           }
           try {
@@ -1820,14 +1954,13 @@
             try {
               await signInAnonymously(auth);
             } catch (authErr) {
-              console.warn('Anonymous auth note:', authErr);
+              // Anonymous auth may be disabled in Firebase Console; continue with Firestore rules check
             }
             firestoreDB = getFirestore(app);
-            setSyncIndicator('synced', 'Cloud Synced');
+            updateSyncStatusBadge('synced', 'Cloud Ready');
             resolve(true);
           } catch (err) {
-            console.warn('Firebase init note:', err);
-            setSyncIndicator('local', 'Local Backup');
+            updateSyncStatusBadge('local', 'Local Storage');
             resolve(false);
           }
         };
@@ -1837,8 +1970,47 @@
 
     async function manualCloudSync() {
       if (!currentUser) return;
+      if (firestorePermissionDenied) {
+        document.getElementById('firestore-rules-modal')?.classList.remove('hidden');
+        if (window.lucide) lucide.createIcons();
+        return;
+      }
       clearTimeout(cloudSaveDebounceTimer);
-      await persistUserData(false);
+      await persistUserData(true);
+      if (firestorePermissionDenied) {
+        document.getElementById('firestore-rules-modal')?.classList.remove('hidden');
+        if (window.lucide) lucide.createIcons();
+      } else {
+        showToast('Synced all data & activity with Firebase!');
+      }
+    }
+
+    function closeFirestoreRulesModal() {
+      document.getElementById('firestore-rules-modal')?.classList.add('hidden');
+    }
+
+    function copyFirestoreRulesSnippet() {
+      const text = document.getElementById('firestore-rules-snippet')?.textContent || '';
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      showToast('Firestore rules copied to clipboard!');
+    }
+
+    async function retryCloudConnection() {
+      firestorePermissionDenied = false;
+      closeFirestoreRulesModal();
+      if (!currentUser) return;
+      await persistUserData(true);
+      if (!firestorePermissionDenied) {
+        setupRealtimeCloudListener(currentUser);
+        showToast('Connected & synced with Firebase!');
+      } else {
+        showToast('Still blocked by Firestore rules — data remains saved locally.');
+      }
     }
 
     // ==================== SIDEBAR & NAVIGATION ====================
@@ -1849,7 +2021,7 @@
       const toggleIcon = document.getElementById('sidebar-toggle-icon');
 
       if (isCollapsed) {
-        sidebar.style.width = '205px';
+        sidebar.style.width = '204px';
         sidebar.setAttribute('data-collapsed', 'false');
         labels.forEach(el => el.classList.remove('hidden'));
         toggleIcon.setAttribute('data-lucide', 'panel-left-close');
@@ -1864,33 +2036,37 @@
 
     function navigateTo(page) {
       ['allocation', 'debts', 'saved', 'setup'].forEach(p => {
-        document.getElementById(`page-${p}`).classList.add('hidden');
+        const sectionEl = document.getElementById(`page-${p}`);
+        if (sectionEl) sectionEl.classList.add('hidden');
+
         const navBtn = document.getElementById(`nav-${p}`);
-        if (p === page) {
-          navBtn.className = 'nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold bg-blue-600 text-white shadow-sm transition';
-        } else {
-          navBtn.className = 'nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold opacity-70 hover:opacity-100 hover:bg-slate-500/10 transition';
+        if (navBtn) {
+          navBtn.className = p === page
+            ? 'nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold bg-blue-600 text-white shadow-sm transition'
+            : 'nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold opacity-70 hover:opacity-100 hover:bg-slate-500/10 transition';
         }
       });
 
-      document.getElementById(`page-${page}`).classList.remove('hidden');
+      const activeSection = document.getElementById(`page-${page}`);
+      if (activeSection) activeSection.classList.remove('hidden');
 
       const titles = {
         allocation: ['Weekly Budget Allocation', 'Budget Allocation for Vhon • Debt-first priority weekly planner'],
-        debts: ['Debts', 'Priority #1: Add bills in advance & manage SPaylater / SLoan by due date'],
-        saved: ['Saved Allocations', 'Total allocation per bank — check off transfers or expand details'],
-        setup: ['Setup & Configuration', 'Customize banks, fixed expenses, variable % & debt-first priority']
+        debts: ['Debts', 'Priority #1 settlement • SPaylater & SLoan sorted by due date'],
+        saved: ['Saved Allocations', 'Total allocation per bank • Check off transfers as you send them'],
+        setup: ['Setup Expenses & Banks', 'Customize fixed bills, variable percentages, assigned banks & activity log']
       };
-      document.getElementById('page-title').textContent = titles[page][0];
-      document.getElementById('page-subtitle').textContent = titles[page][1];
-
-      if (page === 'allocation') {
-        syncLockedDebtsToAllocation(true);
-        refreshAllUI(true);
+      if (titles[page]) {
+        document.getElementById('page-title').textContent = titles[page][0];
+        document.getElementById('page-subtitle').textContent = titles[page][1];
       }
+
       if (page === 'debts') renderDebtsPage();
       if (page === 'saved') renderSavedPage();
-      if (page === 'setup') renderSetupPage();
+      if (page === 'setup') {
+        renderSetupPage();
+        renderActivityLog();
+      }
       if (window.lucide) lucide.createIcons();
     }
 
@@ -1903,7 +2079,7 @@
     }
 
     function parseISODate(str) {
-      const [y, m, d] = str.split('-').map(Number);
+      const [y, m, d] = (str || '2026-11-16').split('-').map(Number);
       return new Date(y, m - 1, d);
     }
 
@@ -1916,7 +2092,7 @@
       const s = parseISODate(startStr);
       const e = parseISODate(endStr);
       if (startStr === endStr) {
-        return s.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        return e.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
       }
       const sTxt = s.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
       const eTxt = e.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
@@ -1958,7 +2134,7 @@
       loadWeekAllocationIfSaved(appState.targetStartDate, appState.targetEndDate, true);
       syncLockedDebtsToAllocation(true);
       refreshAllUI(true);
-      persistUserData(true);
+      recordAccountActivity('Calendar', `Selected payday ${formatShortDate(dateStr)} → target ${formatFullRange(appState.targetStartDate, appState.targetEndDate)}`, true);
     }
 
     function useSelectedDateWeekAsTarget() {
@@ -1976,9 +2152,8 @@
       refreshAllUI(true);
       if (!wasAlreadySaved) {
         autoSaveCurrentWeek(true);
-      } else {
-        persistUserData(true);
       }
+      recordAccountActivity('Calendar', `Set target budget week directly to ${formatFullRange(appState.targetStartDate, appState.targetEndDate)}`, true);
       showToast(`Target week set to ${formatFullRange(appState.targetStartDate, appState.targetEndDate)}`);
     }
 
@@ -1987,7 +2162,7 @@
       const d2 = parseISODate(endStr);
       const [s, e] = d1 <= d2 ? [d1, d2] : [d2, d1];
 
-      const mon = getMondayOfWeek(e);
+      const mon = getMondayOfWeek(s);
       const nextMon = new Date(mon);
       nextMon.setDate(mon.getDate() + 7);
       const nextSun = new Date(nextMon);
@@ -2002,37 +2177,38 @@
       loadWeekAllocationIfSaved(appState.targetStartDate, appState.targetEndDate, true);
       syncLockedDebtsToAllocation(true);
       refreshAllUI(true);
-      persistUserData(true);
+      recordAccountActivity('Calendar', `Selected sahod range ${formatFullRange(appState.incomeStartDate, appState.incomeEndDate)}`, true);
     }
 
     function updateCalendarLabels() {
       const incTxt = formatFullRange(appState.incomeStartDate, appState.incomeEndDate);
       const tgtTxt = formatFullRange(appState.targetStartDate, appState.targetEndDate);
-      const pillEl = document.getElementById('cal-selected-date-pill');
-      if (pillEl) {
-        pillEl.textContent = appState.incomeStartDate === appState.incomeEndDate
-          ? 'Payday'
-          : `${formatShortDate(appState.incomeStartDate)}–${formatShortDate(appState.incomeEndDate)}`;
-      }
-      document.getElementById('cal-income-range-text').textContent = incTxt;
-      document.getElementById('cal-target-range-text').textContent = tgtTxt;
-      document.getElementById('header-target-week').textContent = tgtTxt;
+
+      const selPill = document.getElementById('cal-selected-date-pill');
+      const incRangeEl = document.getElementById('cal-income-range-text');
+      const tgtRangeEl = document.getElementById('cal-target-range-text');
+      const headerTgtEl = document.getElementById('header-target-week');
+
+      if (selPill) selPill.textContent = formatShortDate(appState.selectedDate);
+      if (incRangeEl) incRangeEl.textContent = incTxt;
+      if (tgtRangeEl) tgtRangeEl.textContent = tgtTxt;
+      if (headerTgtEl) headerTgtEl.textContent = tgtTxt;
 
       const miniInc = document.getElementById('mini-cal-income-range');
       const miniTgt = document.getElementById('mini-cal-target-range');
       if (miniInc) miniInc.textContent = incTxt;
       if (miniTgt) miniTgt.textContent = tgtTxt;
 
-      // Update quick "Use Clicked Week" buttons so user can switch directly to the clicked week (e.g. Nov 16–22)
-      const baseStr = appState.selectedDate || appState.incomeStartDate || '2026-11-16';
-      const clickedMon = getMondayOfWeek(parseISODate(baseStr));
+      const baseClicked = parseISODate(appState.selectedDate || appState.incomeStartDate || '2026-11-16');
+      const clickedMon = getMondayOfWeek(baseClicked);
       const clickedSun = new Date(clickedMon);
       clickedSun.setDate(clickedMon.getDate() + 6);
-      const clickedWeekLabel = `Use ${formatShortDate(toISODate(clickedMon))}–${clickedSun.getDate()}`;
+      const btnLabel = `Use ${formatShortDate(toISODate(clickedMon))}–${clickedSun.getDate()}`;
+
       const mainThisWeekBtn = document.getElementById('cal-this-week-btn');
       const miniThisWeekBtn = document.getElementById('mini-cal-this-week-btn');
-      if (mainThisWeekBtn) mainThisWeekBtn.textContent = clickedWeekLabel;
-      if (miniThisWeekBtn) miniThisWeekBtn.textContent = clickedWeekLabel;
+      if (mainThisWeekBtn) mainThisWeekBtn.textContent = btnLabel;
+      if (miniThisWeekBtn) miniThisWeekBtn.textContent = btnLabel;
     }
 
     function changeCalMonth(delta) {
@@ -2047,11 +2223,22 @@
       renderCalendar();
     }
 
-    function buildCalendarGridHTML(year, month, compact = false) {
-      const monthDate = new Date(year, month, 1);
+    function toggleHeaderCalPopover(e) {
+      if (e) e.stopPropagation();
+      const pop = document.getElementById('header-cal-popover');
+      if (!pop) return;
+      pop.classList.toggle('hidden');
+      if (!pop.classList.contains('hidden')) {
+        renderCalendar();
+        if (window.lucide) lucide.createIcons();
+      }
+    }
+
+    function buildCalendarCellsHTML(compact = false) {
+      const monthDate = new Date(appState.calYear, appState.calMonth, 1);
       const firstDayWeekday = monthDate.getDay();
       const startOffset = firstDayWeekday === 0 ? 6 : firstDayWeekday - 1;
-      const daysInMonth = new Date(year, month + 1, 0).getDate();
+      const daysInMonth = new Date(appState.calYear, appState.calMonth + 1, 0).getDate();
 
       const hlStart = appState.incomeStartDate;
       const hlEnd = appState.incomeEndDate;
@@ -2063,13 +2250,13 @@
       }
 
       for (let day = 1; day <= daysInMonth; day++) {
-        const curDate = new Date(year, month, day);
+        const curDate = new Date(appState.calYear, appState.calMonth, day);
         const iso = toISODate(curDate);
         const isSelectedSingle = iso === appState.selectedDate;
         const isInIncomeRange = iso >= hlStart && iso <= hlEnd;
         const isInTargetRange = iso >= appState.targetStartDate && iso <= appState.targetEndDate;
 
-        let classes = `${cellHeight} flex flex-col items-center justify-center font-semibold cursor-pointer relative border transition `;
+        let classes = `cal-day-cell ${cellHeight} flex flex-col items-center justify-center font-semibold cursor-pointer relative border transition `;
         if (isSelectedSingle) {
           classes += 'bg-blue-600 text-white border-blue-500 shadow-sm ';
         } else if (isInIncomeRange) {
@@ -2081,40 +2268,63 @@
         }
 
         let dotHtml = '';
-        if (isInIncomeRange && !isSelectedSingle) {
-          dotHtml = `<span class="w-1 h-1 rounded-full bg-blue-400 mt-0.5 pointer-events-none"></span>`;
-        } else if (isInTargetRange) {
-          dotHtml = `<span class="w-1 h-1 rounded-full bg-emerald-400 mt-0.5 pointer-events-none"></span>`;
+        if (!compact) {
+          if (isInIncomeRange && !isSelectedSingle) {
+            dotHtml = `<span class="pointer-events-none w-1 h-1 rounded-full bg-blue-400 mt-0.5"></span>`;
+          } else if (isInTargetRange) {
+            dotHtml = `<span class="pointer-events-none w-1 h-1 rounded-full bg-emerald-400 mt-0.5"></span>`;
+          }
         }
 
         html += `
           <div data-date="${iso}"
-               onpointerdown="onCalPointerDown(event, '${iso}')"
+               onpointerdown="onCalPointerDown('${iso}', event)"
                onpointerenter="onCalPointerEnter('${iso}')"
-               onclick="onCalCellClickFallback('${iso}')"
                class="${classes}">
             <span class="pointer-events-none">${day}</span>
             ${dotHtml}
           </div>
         `;
       }
+
       return html;
     }
 
     function renderCalendar() {
       const monthDate = new Date(appState.calYear, appState.calMonth, 1);
-      const label = monthDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-      document.getElementById('cal-month-label').textContent = label;
-      document.getElementById('calendar-grid').innerHTML = buildCalendarGridHTML(appState.calYear, appState.calMonth, false);
+      const labelText = monthDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
 
+      const mainLabel = document.getElementById('cal-month-label');
       const miniLabel = document.getElementById('mini-cal-month-label');
+      if (mainLabel) mainLabel.textContent = labelText;
+      if (miniLabel) miniLabel.textContent = labelText;
+
+      const mainGrid = document.getElementById('calendar-grid');
       const miniGrid = document.getElementById('mini-calendar-grid');
-      if (miniLabel) miniLabel.textContent = label;
-      if (miniGrid) miniGrid.innerHTML = buildCalendarGridHTML(appState.calYear, appState.calMonth, true);
+      if (mainGrid) mainGrid.innerHTML = buildCalendarCellsHTML(false);
+      if (miniGrid) miniGrid.innerHTML = buildCalendarCellsHTML(true);
     }
 
-    function onCalPointerDown(event, iso) {
-      if (event && event.button !== undefined && event.button !== 0) return;
+    function updateCalDragPreviewInPlace() {
+      const cells = document.querySelectorAll('.cal-day-cell');
+      if (!pointerDownDate || !dragCurrentStr || !didDragRange) {
+        cells.forEach(el => el.classList.remove('ring-2', 'ring-blue-400'));
+        return;
+      }
+      const lo = pointerDownDate <= dragCurrentStr ? pointerDownDate : dragCurrentStr;
+      const hi = pointerDownDate <= dragCurrentStr ? dragCurrentStr : pointerDownDate;
+      cells.forEach(el => {
+        const d = el.getAttribute('data-date');
+        if (d >= lo && d <= hi) {
+          el.classList.add('ring-2', 'ring-blue-400');
+        } else {
+          el.classList.remove('ring-2', 'ring-blue-400');
+        }
+      });
+    }
+
+    function onCalPointerDown(iso, e) {
+      if (e && e.button !== undefined && e.button !== 0) return;
       pointerDownDate = iso;
       dragCurrentStr = iso;
       didDragRange = false;
@@ -2129,109 +2339,70 @@
       updateCalDragPreviewInPlace();
     }
 
-    function updateCalDragPreviewInPlace() {
-      if (!pointerDownDate || !dragCurrentStr) return;
-      const hlStart = pointerDownDate <= dragCurrentStr ? pointerDownDate : dragCurrentStr;
-      const hlEnd = pointerDownDate <= dragCurrentStr ? dragCurrentStr : pointerDownDate;
-      document.querySelectorAll('#calendar-grid [data-date], #mini-calendar-grid [data-date]').forEach(el => {
-        const d = el.getAttribute('data-date');
-        if (d >= hlStart && d <= hlEnd) {
-          el.classList.add('ring-2', 'ring-blue-400');
-        } else {
-          el.classList.remove('ring-2', 'ring-blue-400');
-        }
-      });
-    }
-
-    function onCalCellClickFallback(iso) {
-      // If pointerup already processed this exact tap within the last 80ms, don't run twice
-      if (Date.now() - lastHandledPointerTs < 80) return;
-      selectPaydayDate(iso);
-    }
-
-    window.addEventListener('pointerup', () => {
+    function finishCalPointerGesture() {
       if (!pointerDownDate) return;
-      const start = pointerDownDate;
-      const end = dragCurrentStr || start;
-      const wasDrag = didDragRange;
+      const startIso = pointerDownDate;
+      const endIso = dragCurrentStr || startIso;
+      const wasDrag = didDragRange && startIso !== endIso;
 
       pointerDownDate = null;
       dragCurrentStr = null;
       didDragRange = false;
-      lastHandledPointerTs = Date.now();
+      updateCalDragPreviewInPlace();
 
-      if (wasDrag && start !== end) {
-        applyDraggedRange(start, end);
+      const now = Date.now();
+      if (now - lastHandledPointerTs < 80) return;
+      lastHandledPointerTs = now;
+
+      if (wasDrag) {
+        applyDraggedRange(startIso, endIso);
+        showToast(`Mapped sahod range to ${formatFullRange(appState.targetStartDate, appState.targetEndDate)}`);
       } else {
-        selectPaydayDate(start);
+        selectPaydayDate(startIso);
+        showToast(`Payday ${formatShortDate(startIso)} → budgeting ${formatFullRange(appState.targetStartDate, appState.targetEndDate)}`);
       }
-    });
+    }
 
+    window.addEventListener('pointerup', finishCalPointerGesture);
     window.addEventListener('pointercancel', () => {
       pointerDownDate = null;
       dragCurrentStr = null;
       didDragRange = false;
+      updateCalDragPreviewInPlace();
     });
-
     window.addEventListener('blur', () => {
       pointerDownDate = null;
       dragCurrentStr = null;
       didDragRange = false;
     });
 
-    function toggleHeaderCalPopover(e) {
-      if (e) e.stopPropagation();
-      const pop = document.getElementById('header-cal-popover');
-      pop.classList.toggle('hidden');
-      renderCalendar();
-      if (window.lucide) lucide.createIcons();
-    }
-
-    function closeHeaderCalPopover() {
-      const pop = document.getElementById('header-cal-popover');
-      if (pop) pop.classList.add('hidden');
-    }
-
-    // Close header popover only when clicking truly outside #header-cal-wrapper
-    let pointerStartedInsideHeaderCal = false;
-    document.addEventListener('pointerdown', (e) => {
-      const wrapper = document.getElementById('header-cal-wrapper');
-      pointerStartedInsideHeaderCal = !!(wrapper && wrapper.contains(e.target));
-    });
-
     document.addEventListener('click', (e) => {
       const wrapper = document.getElementById('header-cal-wrapper');
       const pop = document.getElementById('header-cal-popover');
-      if (!pop || pop.classList.contains('hidden')) return;
-      if (pointerStartedInsideHeaderCal || (wrapper && wrapper.contains(e.target))) {
-        pointerStartedInsideHeaderCal = false;
-        return;
+      if (wrapper && pop && !pop.classList.contains('hidden') && !wrapper.contains(e.target)) {
+        pop.classList.add('hidden');
       }
-      pop.classList.add('hidden');
     });
 
-    window.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') closeHeaderCalPopover();
-    });
-
-    // ==================== BASE WEEKLY INCOME (BUTTON TOGGLES + SINGLE NUMBOX + SAVED WEEKS) ====================
+    // ==================== BASE WEEKLY INCOME PRESETS & SAVED WEEKS BAR ====================
     function renderIncomePresetButtons() {
       const container = document.getElementById('income-preset-buttons');
       if (!container) return;
+
       container.innerHTML = INCOME_PRESETS.map(p => {
         const active = !!(appState.activeIncomePresets && appState.activeIncomePresets[p.key]);
         return `
           <button type="button" onclick="toggleIncomePreset('${p.key}')"
-            class="px-2.5 py-2 rounded-xl border text-left transition flex flex-col justify-between ${
+            class="p-2.5 rounded-xl border text-left transition cursor-pointer ${
               active
                 ? 'bg-blue-600/15 border-blue-500/50 text-blue-400 shadow-xs'
-                : 'app-subcard hover:border-blue-500/35 opacity-75 hover:opacity-100'
+                : 'app-subcard opacity-65 hover:opacity-100'
             }">
-            <div class="flex items-center justify-between gap-1 w-full">
+            <div class="flex items-center justify-between gap-1">
               <span class="text-[11px] font-bold truncate">${p.label}</span>
               <span class="w-2 h-2 rounded-full ${active ? 'bg-blue-400' : 'bg-slate-600'}"></span>
             </div>
-            <span class="text-xs font-extrabold mono-num mt-1">₱${p.amount.toLocaleString()}</span>
+            <div class="text-xs font-extrabold mono-num mt-0.5">${formatCompactPHP(p.amount)}</div>
           </button>
         `;
       }).join('');
@@ -2241,15 +2412,12 @@
       const preset = INCOME_PRESETS.find(p => p.key === key);
       if (!preset) return;
       if (!appState.activeIncomePresets) appState.activeIncomePresets = {};
+
       const wasActive = !!appState.activeIncomePresets[key];
       appState.activeIncomePresets[key] = !wasActive;
 
       let currentVal = Number(appState.baseIncomeValue) || 0;
-      if (!wasActive) {
-        currentVal += preset.amount;
-      } else {
-        currentVal = Math.max(0, currentVal - preset.amount);
-      }
+      currentVal = !wasActive ? currentVal + preset.amount : Math.max(0, currentVal - preset.amount);
 
       appState.baseIncomeValue = Math.round(currentVal * 100) / 100;
       appState.baseIncomeExpr = String(appState.baseIncomeValue);
@@ -2258,6 +2426,7 @@
       renderIncomePresetButtons();
       recalculateBudget();
       autoSaveCurrentWeek(true);
+      recordAccountActivity('Allocation', `${!wasActive ? 'Enabled' : 'Disabled'} ${preset.label} (Base: ${formatPHP(appState.baseIncomeValue)})`);
     }
 
     function handleBaseIncomeBoxInput() {
@@ -2273,51 +2442,41 @@
       document.getElementById('base-income-box').value = appState.baseIncomeValue;
       recalculateBudget();
       autoSaveCurrentWeek(true);
+      recordAccountActivity('Allocation', `Updated Base Weekly Income to ${formatPHP(appState.baseIncomeValue)}`);
     }
 
     function renderSavedWeeksQuickBar() {
       const bar = document.getElementById('allocation-saved-weeks-bar');
-      const badge = document.getElementById('week-saved-badge');
       if (!bar) return;
 
-      const activeWeekId = `${appState.targetStartDate}_${appState.targetEndDate}`;
-      const isCurrentSaved = appState.savedAllocations.some(s => s.id === activeWeekId);
+      const activeId = `${appState.targetStartDate}_${appState.targetEndDate}`;
+      const list = Array.isArray(appState.savedAllocations) ? appState.savedAllocations : [];
 
-      if (badge) {
-        badge.textContent = isCurrentSaved ? 'Auto-Saved' : 'Draft';
-        badge.className = isCurrentSaved
-          ? 'text-[10px] font-semibold text-emerald-400'
-          : 'text-[10px] font-semibold text-amber-400';
-      }
-
-      if (appState.savedAllocations.length === 0) {
-        bar.innerHTML = `<span class="text-[11px] opacity-60">No saved weeks yet.</span>`;
+      if (list.length === 0) {
+        bar.innerHTML = `<span class="text-[11px] opacity-60">Current week auto-saves as you edit.</span>`;
         return;
       }
 
-      bar.innerHTML = appState.savedAllocations.map(snap => {
-        const isActive = snap.id === activeWeekId;
+      bar.innerHTML = list.slice(0, 6).map(snap => {
+        const isCurrent = snap.id === activeId;
         return `
-          <button type="button" onclick="selectSavedWeekFromQuickBar('${snap.id}')"
-            class="px-2.5 py-1 rounded-lg text-[11px] font-semibold transition flex items-center gap-1.5 ${
-              isActive
+          <button type="button" onclick="selectSavedWeekFromBar('${snap.id}')"
+            class="px-2.5 py-1 rounded-lg text-[11px] font-semibold transition cursor-pointer ${
+              isCurrent
                 ? 'bg-blue-600 text-white shadow-xs'
                 : 'app-subcard hover:border-blue-500/40'
             }">
-            <span>${snap.weekBadge.split(' (')[0]}</span>
-            <span class="mono-num opacity-80">₱${Math.round(snap.baseIncome).toLocaleString()}</span>
+            ${snap.weekBadge} &bull; ${formatCompactPHP(snap.baseIncome)}
           </button>
         `;
       }).join('');
     }
 
-    function selectSavedWeekFromQuickBar(weekId) {
-      const snap = appState.savedAllocations.find(s => s.id === weekId);
+    function selectSavedWeekFromBar(weekId) {
+      const snap = (appState.savedAllocations || []).find(s => s.id === weekId);
       if (!snap) return;
       applySnapshotToAllocation(snap, false);
-      syncLockedDebtsToAllocation(true);
       refreshAllUI(true);
-      persistUserData(true);
       showToast(`Loaded ${snap.weekBadge}`);
     }
 
@@ -2337,22 +2496,22 @@
       }
       recalculateBudget();
       autoSaveCurrentWeek(true);
+      recordAccountActivity('Allocation', `Updated Extra Income to ${formatPHP(appState.extraIncomeValue)}`);
     }
 
-    // ==================== FIXED WEEKLY EXPENSES (WITH LEFT-SIDE LOCK BUTTONS) ====================
+    // ==================== FIXED WEEKLY EXPENSES & DEBT ROW LOCKS ====================
     function renderFixedExpensesList() {
       const container = document.getElementById('fixed-expenses-list');
       if (!container) return;
+
       container.innerHTML = appState.fixedItems.map(item => `
         <div class="py-2.5 flex items-center justify-between gap-2 ${item.enabled ? '' : 'opacity-45'}">
           <div class="flex items-center gap-2 min-w-0 flex-1">
             <input type="checkbox" ${item.enabled ? 'checked' : ''} onchange="toggleFixedItem('${item.id}')"
               class="aesthetic-checkbox" />
-            <div class="min-w-0">
-              <div class="text-xs font-medium truncate">
-                <span>${item.name}</span>
-                <span style="color: var(--text-secondary)"> (${item.cycleLabel})</span>
-              </div>
+            <div class="min-w-0 truncate text-xs">
+              <span class="font-semibold">${item.name}</span>
+              <span class="text-[11px]" style="color: var(--text-secondary)"> (${item.cycleLabel})</span>
             </div>
           </div>
 
@@ -2360,17 +2519,13 @@
             <span class="px-2 py-0.5 rounded-md text-[10px] font-semibold ${getBankPillClass(item.bank)}">
               ${item.bank}
             </span>
-
-            <button type="button" onclick="toggleFixedItemLock('${item.id}')"
-              title="${item.locked ? 'Unlock expense amount' : 'Lock expense amount'}"
-              class="p-1.5 rounded-lg app-subcard transition ${item.locked ? 'text-amber-400 border-amber-500/40' : 'text-slate-400 hover:text-blue-400'}">
+            <button type="button" onclick="toggleFixedItemLock('${item.id}')" title="${item.locked ? 'Unlock amount' : 'Lock amount'}"
+              class="p-1.5 rounded-lg app-subcard ${item.locked ? 'text-amber-400 border-amber-500/40' : 'text-slate-400 hover:text-amber-400'} transition">
               <i data-lucide="${item.locked ? 'lock' : 'unlock'}" class="w-3.5 h-3.5"></i>
             </button>
-
             <div class="relative w-20">
               <span class="absolute left-2 top-1/2 -translate-y-1/2 text-[11px] text-slate-500">₱</span>
-              <input type="text" value="${Number(item.weeklyAmount).toFixed(2)}"
-                ${item.locked ? 'disabled' : ''}
+              <input type="text" value="${Number(item.weeklyAmount).toFixed(2)}" ${item.locked ? 'disabled' : ''}
                 onchange="updateFixedItemAmount('${item.id}', this.value)"
                 class="w-full pl-5 pr-1.5 py-1 rounded-lg app-input text-right text-xs font-bold mono-num disabled:opacity-60 disabled:cursor-not-allowed" />
             </div>
@@ -2386,6 +2541,7 @@
         renderFixedExpensesList();
         recalculateBudget();
         autoSaveCurrentWeek(true);
+        recordAccountActivity('Allocation', `${item.enabled ? 'Enabled' : 'Disabled'} fixed expense: ${item.name}`);
         if (window.lucide) lucide.createIcons();
       }
     }
@@ -2396,17 +2552,6 @@
         item.locked = !item.locked;
         renderFixedExpensesList();
         persistUserData(true);
-        if (window.lucide) lucide.createIcons();
-      }
-    }
-
-    function updateFixedItemAmount(id, valStr) {
-      const item = appState.fixedItems.find(x => x.id === id);
-      if (item && !item.locked) {
-        item.weeklyAmount = evaluateMathExpr(valStr);
-        renderFixedExpensesList();
-        recalculateBudget();
-        autoSaveCurrentWeek(true);
         if (window.lucide) lucide.createIcons();
       }
     }
@@ -2511,6 +2656,18 @@
         sloanLabel.textContent = sloanDesc.length > 0
           ? `SLoan (${sloanDesc.join(' + ')})`
           : 'SLoan';
+      }
+    }
+
+    function updateFixedItemAmount(id, valStr) {
+      const item = appState.fixedItems.find(x => x.id === id);
+      if (item && !item.locked) {
+        item.weeklyAmount = evaluateMathExpr(valStr);
+        renderFixedExpensesList();
+        recalculateBudget();
+        autoSaveCurrentWeek(true);
+        recordAccountActivity('Allocation', `Updated ${item.name} to ${formatPHP(item.weeklyAmount)}/wk`);
+        if (window.lucide) lucide.createIcons();
       }
     }
 
@@ -2782,14 +2939,22 @@
     }
 
     function updateNewDebtPreview() {
-      const totalBill = evaluateMathExpr(document.getElementById('new-debt-total').value);
-      const cashSaved = evaluateMathExpr(document.getElementById('new-debt-saved').value);
-      const startDate = document.getElementById('new-debt-start').value || appState.incomeStartDate;
-      const dueDate = document.getElementById('new-debt-due').value || appState.targetEndDate;
+      const totalEl = document.getElementById('new-debt-total');
+      const savedEl = document.getElementById('new-debt-saved');
+      const startEl = document.getElementById('new-debt-start');
+      const dueEl = document.getElementById('new-debt-due');
+      const descEl = document.getElementById('new-debt-preview-desc');
+      const weeklyEl = document.getElementById('new-debt-preview-weekly');
+      if (!totalEl || !descEl || !weeklyEl) return;
+
+      const totalBill = evaluateMathExpr(totalEl.value);
+      const cashSaved = evaluateMathExpr(savedEl?.value);
+      const startDate = startEl?.value || appState.incomeStartDate;
+      const dueDate = dueEl?.value || appState.targetEndDate;
 
       const stats = computeDebtStats({ totalBill, cashSaved, startDate, dueDate, paid: false });
-      document.getElementById('new-debt-preview-desc').textContent = `Deficit ${formatCompactPHP(stats.deficit)} ÷ ${stats.weeksCount} wk${stats.weeksCount > 1 ? 's' : ''}`;
-      document.getElementById('new-debt-preview-weekly').textContent = `${formatPHP(stats.weeklyDivision)}/wk`;
+      descEl.textContent = `Deficit ${formatCompactPHP(stats.deficit)} ÷ ${stats.weeksCount} wk${stats.weeksCount > 1 ? 's' : ''}`;
+      weeklyEl.textContent = `${formatPHP(stats.weeklyDivision)}/wk`;
     }
 
     function submitAdvanceDebt(lockImmediately) {
@@ -2833,6 +2998,7 @@
       recalculateBudget();
       autoSaveCurrentWeek(true);
       renderDebtsPage();
+      recordAccountActivity('Debts', `Added ${provider} (${label}): ${formatCompactPHP(totalBill)} due ${formatShortDate(dueDate)}`, true);
 
       if (lockImmediately && !inRange) {
         showToast(`Saved in ${provider} Staged! Locking unlocks on ${formatShortDate(startDate)}.`);
@@ -3091,11 +3257,13 @@
     }
 
     function deleteDebtCard(id) {
+      const removed = appState.debts.find(d => d.id === id);
       appState.debts = appState.debts.filter(d => d.id !== id);
       syncLockedDebtsToAllocation(true);
       recalculateBudget();
       autoSaveCurrentWeek(true);
       renderDebtsPage();
+      if (removed) recordAccountActivity('Debts', `Deleted ${removed.provider} (${removed.label || 'Bill'})`, true);
       showToast('Debt removed & synced to Allocation.');
     }
 
@@ -3113,6 +3281,7 @@
       recalculateBudget();
       autoSaveCurrentWeek(true);
       renderDebtsPage();
+      recordAccountActivity('Debts', `${d.locked ? 'Locked' : 'Unlocked'} ${d.provider} (${d.label || 'Bill'})`, true);
       showToast(d.locked ? `${d.provider} locked & synced to Allocation!` : `${d.provider} moved to staged & synced.`);
     }
 
@@ -3125,6 +3294,7 @@
         recalculateBudget();
         autoSaveCurrentWeek(true);
         renderDebtsPage();
+        recordAccountActivity('Debts', `${d.paid ? 'Marked paid' : 'Reopened'} ${d.provider} (${d.label || 'Bill'})`, true);
         showToast(d.paid ? `${d.provider} marked as paid & synced!` : `${d.provider} reopened & synced.`);
       }
     }
@@ -3276,7 +3446,7 @@
       const key = `${snapId}_${bankName}`;
       appState.transferredChecklist[key] = !appState.transferredChecklist[key];
       renderSavedPage();
-      persistUserData(true);
+      recordAccountActivity('Saved', `${appState.transferredChecklist[key] ? 'Checked' : 'Unchecked'} ${bankName} transfer (${snapId})`, true);
     }
 
     function loadSelectedSavedWeekToAllocation() {
@@ -3443,6 +3613,7 @@
       syncLockedDebtsToAllocation(false);
       autoSaveCurrentWeek(true);
       renderSetupPage();
+      recordAccountActivity('Setup', `Assigned Priority #1 debts to ${bankName}`, true);
       showToast(`Debt settlement wallet updated to ${bankName}`);
     }
 
@@ -3461,7 +3632,7 @@
       appState.banks.push({ name, pillClass: styleSelect.value || 'pill-blue' });
       nameInput.value = '';
       renderSetupPage();
-      persistUserData(true);
+      recordAccountActivity('Setup', `Added bank: ${name}`, true);
       showToast(`Added bank: ${name}`);
     }
 
@@ -3478,6 +3649,7 @@
       recalculateBudget();
       autoSaveCurrentWeek(true);
       renderSetupPage();
+      recordAccountActivity('Setup', `Removed bank ${bankName} (reassigned to ${fallback})`, true);
       showToast(`Removed ${bankName} & reassigned items to ${fallback}`);
     }
 
@@ -3507,6 +3679,7 @@
       recalculateBudget();
       autoSaveCurrentWeek(true);
       renderSetupPage();
+      recordAccountActivity('Setup', `Added fixed expense: ${name} (${formatPHP(amt)}/wk → ${bank})`, true);
       showToast(`Added fixed expense: ${name}`);
     }
 
@@ -3526,14 +3699,17 @@
       recalculateBudget();
       autoSaveCurrentWeek(true);
       renderSetupPage();
+      recordAccountActivity('Setup', `Updated fixed expense ${item.name} (${field})`, true);
     }
 
     function deleteSetupFixed(id) {
+      const removed = appState.fixedItems.find(f => f.id === id);
       appState.fixedItems = appState.fixedItems.filter(f => f.id !== id);
       renderFixedExpensesList();
       recalculateBudget();
       autoSaveCurrentWeek(true);
       renderSetupPage();
+      if (removed) recordAccountActivity('Setup', `Deleted fixed expense: ${removed.name}`, true);
       showToast('Fixed expense removed.');
     }
 
@@ -3563,6 +3739,7 @@
       recalculateBudget();
       autoSaveCurrentWeek(true);
       renderSetupPage();
+      recordAccountActivity('Setup', `Added variable category: ${name} (${pct}% → ${bank})`, true);
       showToast(`Added variable category: ${name}`);
     }
 
@@ -3579,6 +3756,7 @@
       recalculateBudget();
       autoSaveCurrentWeek(true);
       renderSetupPage();
+      recordAccountActivity('Setup', `Updated variable category ${cat.name} (${field})`, true);
     }
 
     function autoBalanceVariablePercentages() {
@@ -3605,6 +3783,7 @@
       recalculateBudget();
       autoSaveCurrentWeek(true);
       renderSetupPage();
+      recordAccountActivity('Setup', 'Auto-balanced variable percentages to 100%', true);
       showToast('Variable percentages balanced to 100%!');
     }
 
@@ -3613,10 +3792,12 @@
         showToast('At least one variable category is required.');
         return;
       }
+      const removed = appState.variableCategories.find(c => c.id === id);
       appState.variableCategories = appState.variableCategories.filter(c => c.id !== id);
       recalculateBudget();
       autoSaveCurrentWeek(true);
       renderSetupPage();
+      if (removed) recordAccountActivity('Setup', `Deleted variable category: ${removed.name}`, true);
       showToast('Variable category removed.');
     }
 
@@ -3654,8 +3835,25 @@
       renderDebtsPage();
       renderSavedPage();
       renderSetupPage();
+      renderActivityLog();
       if (window.lucide) lucide.createIcons();
     }
+
+    // Flush pending edits when tab is hidden or closed
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden' && currentUser && hasCompletedInitialLoad) {
+        clearTimeout(cloudSaveDebounceTimer);
+        persistUserData(true);
+      }
+    });
+
+    window.addEventListener('beforeunload', () => {
+      if (currentUser && hasCompletedInitialLoad) {
+        try {
+          localStorage.setItem(getUserStorageKey(currentUser), JSON.stringify(appState));
+        } catch (e) {}
+      }
+    });
 
     window.addEventListener('DOMContentLoaded', () => {
       initTheme();
