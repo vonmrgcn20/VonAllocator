@@ -715,6 +715,7 @@
                       <span class="absolute left-2 top-1/2 -translate-y-1/2 text-[11px] font-bold text-amber-400">₱</span>
                       <input id="fixed-spaylater" type="text" value="367.50"
                         oninput="handleDebtInputOverride('spaylater', this.value)"
+                        placeholder="0.00"
                         class="w-full pl-5 pr-1.5 py-1 rounded-lg app-input text-right text-xs font-bold text-amber-400 mono-num disabled:opacity-60 disabled:cursor-not-allowed" />
                     </div>
                   </div>
@@ -737,6 +738,7 @@
                       <span class="absolute left-2 top-1/2 -translate-y-1/2 text-[11px] font-bold text-amber-400">₱</span>
                       <input id="fixed-sloan" type="text" value="0.00"
                         oninput="handleDebtInputOverride('sloan', this.value)"
+                        placeholder="0.00"
                         class="w-full pl-5 pr-1.5 py-1 rounded-lg app-input text-right text-xs font-bold text-amber-400 mono-num disabled:opacity-60 disabled:cursor-not-allowed" />
                     </div>
                   </div>
@@ -744,65 +746,74 @@
               </div>
             </div>
 
-            <!-- Total Fixed & Debt Obligations Footer -->
+            <!-- Total Fixed + Debt Obligations Footer -->
             <div class="mt-3 pt-3.5 border-t app-divider flex items-center justify-between">
-              <span class="text-xs sm:text-sm font-bold">Total Debts + Fixed</span>
-              <span id="fixed-expenses-total" class="text-base font-extrabold text-rose-500 mono-num">₱1,191.58</span>
+              <span class="text-xs font-bold">Total Debts + Fixed</span>
+              <span id="fixed-expenses-total" class="text-sm font-extrabold text-rose-500 mono-num">₱1,191.58</span>
             </div>
           </div>
 
           <!-- PANEL 2 (1/3): WEEKLY VARIABLE ALLOCATION -->
-          <div class="app-card rounded-2xl p-5">
-            <div class="mb-3.5">
-              <h3 class="text-sm font-bold">Weekly Variable Allocation</h3>
-              <p class="text-xs mt-0.5" style="color: var(--text-secondary)">Distributed after Debts (1st) &amp; Fixed Bills (2nd)</p>
-            </div>
+          <div class="app-card rounded-2xl p-5 flex flex-col justify-between">
+            <div>
+              <div class="flex items-center gap-2.5 mb-3.5">
+                <div class="w-8 h-8 rounded-lg bg-emerald-500/15 text-emerald-400 flex items-center justify-center shrink-0">
+                  <i data-lucide="pie-chart" class="w-4 h-4"></i>
+                </div>
+                <div>
+                  <h3 class="text-sm font-bold">Weekly Variable Allocation</h3>
+                  <p class="text-[11px]" style="color: var(--text-secondary)">Priority #3 split after debts &amp; fixed bills</p>
+                </div>
+              </div>
 
-            <!-- Inner Callout Box: Available to Allocate -->
-            <div class="p-3.5 rounded-xl app-subcard flex items-center justify-between mb-4">
-              <span class="text-xs font-medium" style="color: var(--text-secondary)">Available to Allocate</span>
-              <span id="var-remaining-base" class="text-base font-extrabold text-emerald-400 mono-num">₱108.42</span>
-            </div>
+              <!-- Available Pool Callout -->
+              <div class="p-3 rounded-xl app-subcard flex items-center justify-between mb-4">
+                <span class="text-xs font-medium" style="color: var(--text-secondary)">Available to Allocate</span>
+                <span id="var-remaining-base" class="text-sm font-extrabold text-emerald-400 mono-num">₱108.42</span>
+              </div>
 
-            <!-- Variable Category Rows -->
-            <div id="variable-allocation-list" class="space-y-3">
-              <!-- Rendered via JS -->
+              <!-- Variable Breakdown List -->
+              <div id="variable-allocation-list" class="space-y-3">
+                <!-- Rendered via JS -->
+              </div>
             </div>
           </div>
 
           <!-- PANEL 3 (1/3): EXTRA INCOME ALLOCATION -->
-          <div class="app-card rounded-2xl p-5">
-            <div class="flex items-center gap-2.5 mb-4">
-              <div class="w-8 h-8 rounded-lg bg-emerald-500/15 text-emerald-400 flex items-center justify-center shrink-0">
-                <i data-lucide="banknote" class="w-4 h-4"></i>
+          <div class="app-card rounded-2xl p-5 flex flex-col justify-between">
+            <div>
+              <div class="flex items-center gap-2.5 mb-3.5">
+                <div class="w-8 h-8 rounded-lg bg-blue-500/15 text-blue-400 flex items-center justify-center shrink-0">
+                  <i data-lucide="banknote" class="w-4 h-4"></i>
+                </div>
+                <div>
+                  <h3 class="text-sm font-bold">Extra Income Allocation</h3>
+                  <p class="text-[11px]" style="color: var(--text-secondary)">Bonus earnings split across wallets</p>
+                </div>
               </div>
-              <div>
-                <h3 class="text-sm font-bold">Extra Income Allocation</h3>
-                <p class="text-[11px]" style="color: var(--text-secondary)">Bonus earnings split by variable %</p>
-              </div>
-            </div>
 
-            <div class="mb-4">
-              <label class="block text-[10px] font-bold uppercase tracking-wider mb-1.5" style="color: var(--text-secondary)">
-                Extra Income Amount
-              </label>
-              <div class="relative">
-                <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-500">₱</span>
-                <input id="extra-income-input" type="text" value=""
-                  oninput="handleExtraIncomeInput()"
-                  onblur="finalizeExtraIncomeInput()"
-                  onkeydown="if(event.key==='Enter'){this.blur();}"
-                  placeholder="Enter extra earnings (e.g. 500+300)"
-                  class="w-full pl-8 pr-4 py-2.5 rounded-xl app-input text-xs sm:text-sm font-semibold mono-num" />
+              <div class="mb-3.5">
+                <label class="block text-[10px] font-bold uppercase tracking-wider mb-1.5" style="color: var(--text-secondary)">
+                  Extra Income Amount
+                </label>
+                <div class="relative">
+                  <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-500">₱</span>
+                  <input id="extra-income-input" type="text" value=""
+                    oninput="handleExtraIncomeInput()"
+                    onblur="finalizeExtraIncomeInput()"
+                    onkeydown="if(event.key==='Enter'){this.blur();}"
+                    placeholder="Enter extra earnings (e.g. 500+300)"
+                    class="w-full pl-8 pr-4 py-2.5 rounded-xl app-input text-xs font-semibold mono-num" />
+                </div>
               </div>
-            </div>
 
-            <div class="pt-3 border-t app-divider">
-              <div class="text-[10px] font-bold uppercase tracking-wider mb-3" style="color: var(--text-secondary)">
-                Extra Breakdown &amp; Wallets
-              </div>
-              <div id="extra-allocation-list" class="space-y-3">
-                <!-- Rendered via JS -->
+              <div class="pt-3 border-t app-divider">
+                <div class="text-[10px] font-bold uppercase tracking-wider mb-2.5" style="color: var(--text-secondary)">
+                  Extra Breakdown &amp; Wallets
+                </div>
+                <div id="extra-allocation-list" class="space-y-2.5">
+                  <!-- Rendered via JS -->
+                </div>
               </div>
             </div>
           </div>
@@ -970,55 +981,99 @@
         </div>
       </section>
 
-      <!-- ==================== PAGE 3: SAVED (TOTAL ALLOCATION PER BANK — COLLAPSIBLE CARDS) ==================== -->
-      <section id="page-saved" class="hidden p-5 sm:p-6 max-w-6xl mx-auto space-y-5">
-        <div class="app-card rounded-2xl p-5 space-y-5">
-          <!-- Top Header Row -->
-          <div class="flex flex-wrap items-center justify-between gap-3">
-            <div class="flex flex-wrap items-center gap-3">
-              <div class="w-8 h-8 rounded-lg bg-slate-500/15 text-slate-300 flex items-center justify-center">
-                <i data-lucide="landmark" class="w-4 h-4"></i>
-              </div>
-              <h3 class="text-base font-bold">Total Allocation per Bank</h3>
+      <!-- ==================== PAGE 3: SAVED (1/2 CURRENT WEEK | 1/2 UPCOMING WEEKS COLLAPSED DROPDOWNS) ==================== -->
+      <section id="page-saved" class="hidden p-5 sm:p-6 max-w-7xl mx-auto">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
 
-              <!-- Week Selector Pill -->
-              <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-blue-500/15 border border-blue-500/30 text-blue-400 text-xs font-semibold">
-                <i data-lucide="calendar" class="w-3.5 h-3.5"></i>
-                <select id="saved-week-selector" onchange="renderSavedPage()"
-                  class="bg-transparent focus:outline-none cursor-pointer font-semibold">
-                  <!-- Populated via JS -->
-                </select>
+          <!-- LEFT PANEL (1/2): CURRENT WEEK -->
+          <div class="app-card rounded-2xl p-5 space-y-4">
+            <div class="flex flex-wrap items-center justify-between gap-3 pb-3.5 border-b app-divider">
+              <div class="flex items-center gap-2.5 min-w-0">
+                <div class="w-8 h-8 rounded-lg bg-blue-500/15 text-blue-400 flex items-center justify-center shrink-0">
+                  <i data-lucide="landmark" class="w-4 h-4"></i>
+                </div>
+                <div class="min-w-0">
+                  <div class="flex items-center gap-2">
+                    <h3 class="text-sm font-bold">Current Week</h3>
+                    <span id="saved-current-week-badge" class="px-2 py-0.5 rounded-md bg-blue-500/15 border border-blue-500/30 text-blue-400 text-[11px] font-bold truncate">
+                      Week 48
+                    </span>
+                  </div>
+                  <p id="saved-current-week-range" class="text-[11px] mt-0.5" style="color: var(--text-secondary)">
+                    Nov 23 – Nov 29, 2026
+                  </p>
+                </div>
+              </div>
+
+              <div class="flex items-center gap-2 shrink-0">
+                <button type="button" onclick="toggleCurrentWeekBankCards()" id="toggle-current-banks-btn"
+                  class="px-2.5 py-1.5 rounded-lg app-subcard hover:border-blue-500/40 text-[11px] font-semibold transition">
+                  Expand All
+                </button>
+                <div class="px-3 py-1.5 rounded-xl app-subcard flex items-center gap-1.5 text-xs">
+                  <span class="font-bold uppercase text-[10px]" style="color: var(--text-secondary)">TOTAL:</span>
+                  <span id="saved-current-grand-total" class="text-sm font-extrabold text-emerald-400 mono-num">₱0.00</span>
+                </div>
               </div>
             </div>
 
-            <div class="flex items-center gap-2.5">
-              <button type="button" onclick="loadSelectedSavedWeekToAllocation()"
-                class="px-3 py-1.5 rounded-lg bg-blue-600/15 hover:bg-blue-600/25 text-blue-400 border border-blue-500/30 text-xs font-semibold transition flex items-center gap-1.5">
-                <i data-lucide="arrow-up-right" class="w-3.5 h-3.5"></i>
-                <span>Load in Allocation</span>
-              </button>
+            <p class="text-[11px]" style="color: var(--text-secondary)">
+              Check off each bank on the left once transferred, or click a bank card to view its itemized breakdown.
+            </p>
 
-              <button type="button" onclick="toggleAllBankCards()" id="toggle-all-banks-btn"
-                class="px-3 py-1.5 rounded-lg app-subcard hover:border-blue-500/40 text-xs font-semibold transition">
-                Expand All
-              </button>
+            <!-- Current Week Bank Cards -->
+            <div id="saved-current-bank-cards" class="space-y-3">
+              <!-- Rendered via JS -->
+            </div>
+          </div>
 
-              <!-- Total Pill Badge -->
-              <div class="px-3.5 py-1.5 rounded-xl app-subcard flex items-center gap-2 text-xs">
-                <span class="font-bold tracking-wider uppercase" style="color: var(--text-secondary)">TOTAL:</span>
-                <span id="saved-grand-total" class="text-sm font-extrabold text-emerald-400 mono-num">₱1,300.00</span>
+          <!-- RIGHT PANEL (1/2): UPCOMING WEEKS (COLLAPSED DROPDOWNS BY DEFAULT) -->
+          <div class="app-card rounded-2xl p-5 space-y-4">
+            <div class="flex flex-wrap items-center justify-between gap-3 pb-3.5 border-b app-divider">
+              <div class="flex items-center gap-2.5">
+                <div class="w-8 h-8 rounded-lg bg-emerald-500/15 text-emerald-400 flex items-center justify-center shrink-0">
+                  <i data-lucide="calendar-clock" class="w-4 h-4"></i>
+                </div>
+                <div>
+                  <div class="flex items-center gap-2">
+                    <h3 class="text-sm font-bold">Upcoming Weeks</h3>
+                    <span id="saved-upcoming-count" class="px-2 py-0.5 rounded-full app-subcard text-[11px] font-bold">
+                      0
+                    </span>
+                  </div>
+                  <p class="text-[11px] mt-0.5" style="color: var(--text-secondary)">
+                    Click any upcoming week dropdown to inspect or load
+                  </p>
+                </div>
+              </div>
+
+              <div class="flex items-center gap-2">
+                <button type="button" onclick="toggleAllUpcomingWeeks()" id="toggle-upcoming-weeks-btn"
+                  class="px-2.5 py-1.5 rounded-lg app-subcard hover:border-blue-500/40 text-[11px] font-semibold transition">
+                  Expand All
+                </button>
+              </div>
+            </div>
+
+            <!-- Upcoming Weeks Collapsed Dropdown List -->
+            <div id="saved-upcoming-weeks-list" class="space-y-3">
+              <!-- Rendered via JS -->
+            </div>
+
+            <!-- Earlier Saved Weeks (Collapsed Dropdowns) -->
+            <div id="saved-past-weeks-wrapper" class="hidden pt-3 border-t app-divider space-y-2.5">
+              <div class="flex items-center justify-between">
+                <span class="text-[10px] font-bold uppercase tracking-wider" style="color: var(--text-muted)">
+                  Earlier Saved Weeks
+                </span>
+                <span id="saved-past-count" class="px-2 py-0.5 rounded-full app-subcard text-[10px] font-bold">0</span>
+              </div>
+              <div id="saved-past-weeks-list" class="space-y-2.5">
+                <!-- Rendered via JS -->
               </div>
             </div>
           </div>
 
-          <p class="text-xs" style="color: var(--text-secondary)">
-            Check off each bank on the left once transferred, or click any bank card to expand its itemized breakdown.
-          </p>
-
-          <!-- 3-Column Grid of Collapsible Bank Cards -->
-          <div id="bank-cards-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-start">
-            <!-- Rendered via JS -->
-          </div>
         </div>
       </section>
 
@@ -1295,7 +1350,8 @@ service cloud.firestore {
     let firebaseReadyPromise = null;
     let unsubscribeUserSnapshot = null;
     let firestorePermissionDenied = false;
-    let allBankCardsExpanded = false;
+    let currentWeekBanksExpanded = false;
+    let allUpcomingWeeksExpanded = false;
     let isRestoringWeekState = false;
     let hasCompletedInitialLoad = false;
     let cloudSaveDebounceTimer = null;
@@ -2875,7 +2931,15 @@ service cloud.firestore {
         appState.extraIncomeValue = Number(snap.extraIncome) || 0;
         appState.extraIncomeExpr = appState.extraIncomeValue > 0 ? String(appState.extraIncomeValue) : '';
         if (Array.isArray(snap.fixedItems) && snap.fixedItems.length > 0) {
-          appState.fixedItems = JSON.parse(JSON.stringify(snap.fixedItems));
+          const setupFixed = appState.fixedItems || [];
+          appState.fixedItems = snap.fixedItems.map(item => {
+            const matchedSetup = setupFixed.find(
+              sf => sf.id === item.id || sf.name.toLowerCase() === (item.name || '').toLowerCase()
+            );
+            return matchedSetup
+              ? { ...item, name: matchedSetup.name, bank: matchedSetup.bank, cycleLabel: matchedSetup.cycleLabel }
+              : { ...item };
+          });
         }
         appState.spaylaterWeekly = Number(snap.spaylaterWeekly) || 0;
         appState.sloanWeekly = Number(snap.sloanWeekly) || 0;
@@ -3189,12 +3253,30 @@ service cloud.firestore {
                   </div>
                 </div>
 
-                <div class="flex items-center justify-between text-[11px]" style="color: var(--text-secondary)">
+                <div class="text-[11px] flex items-center justify-between" style="color: var(--text-secondary)">
                   <span>Deficit ${formatCompactPHP(stats.deficit)} &divide; ${stats.weeksCount}w (${formatPHP(stats.weeklyDivision)}/wk)</span>
-                  <button type="button" onclick="deleteDebtCard('${debt.id}')" title="Delete"
-                    class="p-1 rounded-lg text-slate-500 hover:text-rose-400 transition">
-                    <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
-                  </button>
+                  ${!inRange ? `<span class="px-1.5 py-0.5 rounded bg-blue-500/15 text-blue-400 text-[10px] font-semibold">Upcoming</span>` : ''}
+                </div>
+
+                <div class="w-full h-1.5 rounded-full overflow-hidden app-card">
+                  <div class="h-full bg-emerald-500 transition-all duration-300" style="width: ${stats.progressPct}%"></div>
+                </div>
+
+                <div class="flex items-center justify-between gap-1.5 pt-0.5">
+                  <span class="text-[10px]" style="color: var(--text-muted)">
+                    ${inRange ? `In range • Due ${formatShortDate(debt.dueDate)}` : `Reflects on ${formatShortDate(debt.startDate)}`}
+                  </span>
+                  <div class="flex items-center gap-1.5">
+                    <button type="button" onclick="toggleDebtPaid('${debt.id}')"
+                      class="px-2 py-1 rounded-lg text-[11px] font-semibold app-card hover:border-emerald-500/40 text-emerald-400 flex items-center gap-1 transition">
+                      <i data-lucide="check" class="w-3 h-3"></i>
+                      <span>Paid</span>
+                    </button>
+                    <button type="button" onclick="deleteDebtCard('${debt.id}')" title="Delete"
+                      class="p-1 rounded-lg text-slate-500 hover:text-rose-400 transition">
+                      <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -3203,68 +3285,69 @@ service cloud.firestore {
       `;
     }
 
-    function renderDebtsPage(expandedStagedId = null) {
-      const spayContainer = document.getElementById('debts-spaylater-list');
-      const sloanContainer = document.getElementById('debts-sloan-list');
-      const spayStagedContainer = document.getElementById('debts-spaylater-staged-list');
-      const sloanStagedContainer = document.getElementById('debts-sloan-staged-list');
-      if (!spayContainer || !sloanContainer) return;
+    function renderDebtsPage(expandedId = null) {
+      const spayLockedEl = document.getElementById('debts-spaylater-list');
+      const spayStagedEl = document.getElementById('debts-spaylater-staged-list');
+      const sloanLockedEl = document.getElementById('debts-sloan-list');
+      const sloanStagedEl = document.getElementById('debts-sloan-staged-list');
+      if (!spayLockedEl || !sloanLockedEl) return;
 
-      const sortByDueDateAsc = (a, b) => (a.dueDate || '9999-12-31').localeCompare(b.dueDate || '9999-12-31');
+      const sortByDue = (a, b) => (a.dueDate || '').localeCompare(b.dueDate || '');
 
       const spayLocked = appState.debts
         .filter(d => d.provider === 'SPaylater' && (d.locked || d.paid))
-        .sort(sortByDueDateAsc);
+        .sort(sortByDue);
       const spayStaged = appState.debts
         .filter(d => d.provider === 'SPaylater' && !d.locked && !d.paid)
-        .sort(sortByDueDateAsc);
+        .sort(sortByDue);
 
       const sloanLocked = appState.debts
         .filter(d => d.provider === 'SLoan' && (d.locked || d.paid))
-        .sort(sortByDueDateAsc);
+        .sort(sortByDue);
       const sloanStaged = appState.debts
         .filter(d => d.provider === 'SLoan' && !d.locked && !d.paid)
-        .sort(sortByDueDateAsc);
+        .sort(sortByDue);
 
       const spayWeeklyTotal = spayLocked
         .filter(d => !d.paid && isDebtInRange(d))
         .reduce((s, d) => s + computeDebtStats(d).weeklyDivision, 0);
       document.getElementById('spaylater-panel-total').textContent = `${formatPHP(spayWeeklyTotal)}/wk`;
-      spayContainer.innerHTML = spayLocked.length > 0
-        ? spayLocked.map(renderLockedDebtCard).join('')
-        : `<div class="text-xs text-center py-5 opacity-60">No locked SPaylater debts yet.</div>`;
-
       document.getElementById('spaylater-staged-count').textContent = spayStaged.length;
-      spayStagedContainer.innerHTML = spayStaged.length > 0
-        ? spayStaged.map(d => renderStagedDebtCard(d, d.id === expandedStagedId)).join('')
-        : `<div class="text-[11px] text-center py-3 opacity-55">No staged SPaylater bills.</div>`;
+
+      spayLockedEl.innerHTML = spayLocked.length > 0
+        ? spayLocked.map(renderLockedDebtCard).join('')
+        : `<div class="text-xs text-center py-4 opacity-60">No locked SPaylater bills.</div>`;
+
+      spayStagedEl.innerHTML = spayStaged.length > 0
+        ? spayStaged.map(d => renderStagedDebtCard(d, d.id === expandedId)).join('')
+        : `<div class="text-xs text-center py-3 opacity-50">No staged SPaylater bills.</div>`;
 
       const sloanWeeklyTotal = sloanLocked
         .filter(d => !d.paid && isDebtInRange(d))
         .reduce((s, d) => s + computeDebtStats(d).weeklyDivision, 0);
       document.getElementById('sloan-panel-total').textContent = `${formatPHP(sloanWeeklyTotal)}/wk`;
-      sloanContainer.innerHTML = sloanLocked.length > 0
-        ? sloanLocked.map(renderLockedDebtCard).join('')
-        : `<div class="text-xs text-center py-5 opacity-60">No locked SLoan debts yet.</div>`;
-
       document.getElementById('sloan-staged-count').textContent = sloanStaged.length;
-      sloanStagedContainer.innerHTML = sloanStaged.length > 0
-        ? sloanStaged.map(d => renderStagedDebtCard(d, d.id === expandedStagedId)).join('')
-        : `<div class="text-[11px] text-center py-3 opacity-55">No staged SLoan bills.</div>`;
+
+      sloanLockedEl.innerHTML = sloanLocked.length > 0
+        ? sloanLocked.map(renderLockedDebtCard).join('')
+        : `<div class="text-xs text-center py-4 opacity-60">No locked SLoan bills.</div>`;
+
+      sloanStagedEl.innerHTML = sloanStaged.length > 0
+        ? sloanStaged.map(d => renderStagedDebtCard(d, d.id === expandedId)).join('')
+        : `<div class="text-xs text-center py-3 opacity-50">No staged SLoan bills.</div>`;
 
       updateNewDebtPreview();
       if (window.lucide) lucide.createIcons();
     }
 
     function deleteDebtCard(id) {
-      const removed = appState.debts.find(d => d.id === id);
+      const target = appState.debts.find(d => d.id === id);
       appState.debts = appState.debts.filter(d => d.id !== id);
       syncLockedDebtsToAllocation(true);
       recalculateBudget();
       autoSaveCurrentWeek(true);
       renderDebtsPage();
-      if (removed) recordAccountActivity('Debts', `Deleted ${removed.provider} (${removed.label || 'Bill'})`, true);
-      showToast('Debt removed & synced to Allocation.');
+      if (target) recordAccountActivity('Debts', `Removed ${target.provider} (${target.label || 'Bill'})`, true);
     }
 
     function toggleDebtLock(id) {
@@ -3282,7 +3365,7 @@ service cloud.firestore {
       autoSaveCurrentWeek(true);
       renderDebtsPage();
       recordAccountActivity('Debts', `${d.locked ? 'Locked' : 'Unlocked'} ${d.provider} (${d.label || 'Bill'})`, true);
-      showToast(d.locked ? `${d.provider} locked & synced to Allocation!` : `${d.provider} moved to staged & synced.`);
+      showToast(d.locked ? `${d.provider} locked & synced to Allocation!` : `${d.provider} moved to staged.`);
     }
 
     function toggleDebtPaid(id) {
@@ -3295,133 +3378,247 @@ service cloud.firestore {
         autoSaveCurrentWeek(true);
         renderDebtsPage();
         recordAccountActivity('Debts', `${d.paid ? 'Marked paid' : 'Reopened'} ${d.provider} (${d.label || 'Bill'})`, true);
-        showToast(d.paid ? `${d.provider} marked as paid & synced!` : `${d.provider} reopened & synced.`);
+        showToast(d.paid ? `${d.provider} marked as paid!` : `${d.provider} reopened.`);
       }
     }
 
-    // ==================== PAGE 3: SAVED (TOTAL ALLOCATION PER BANK) ====================
+    // ==================== PAGE 3: SAVED (1/2 CURRENT WEEK | 1/2 UPCOMING WEEKS COLLAPSED DROPDOWNS) ====================
+    function buildBankBreakdownForSnapshot(snap) {
+      const configuredBanks = appState.banks || DEFAULT_BANKS;
+      const configuredBankNames = configuredBanks.map(b => b.name);
+      const bankMap = {};
+      configuredBankNames.forEach(b => { bankMap[b] = []; });
+
+      const setupFixedList = appState.fixedItems || [];
+      const setupVarList = appState.variableCategories || [];
+      const latestDebtBank = appState.debtBank || snap.debtBank || 'ShopeePay';
+
+      // 1. Recurring Fixed Items (always resolve bank dynamically from latest Setup)
+      (snap.fixedItems || []).filter(it => it.enabled !== false).forEach(item => {
+        const matchedSetup = setupFixedList.find(
+          sf => sf.id === item.id || sf.name.toLowerCase() === (item.name || '').toLowerCase()
+        );
+        const resolvedBank = (matchedSetup && matchedSetup.bank) || item.bank || configuredBankNames[0] || 'MariBank';
+        const resolvedName = (matchedSetup && matchedSetup.name) || item.name;
+        if (!bankMap[resolvedBank]) bankMap[resolvedBank] = [];
+        bankMap[resolvedBank].push({
+          label: resolvedName,
+          amount: Number(item.weeklyAmount) || 0
+        });
+      });
+
+      // 2. Priority #1 Debts (always resolve to latest Debt Bank from Setup)
+      if (!bankMap[latestDebtBank]) bankMap[latestDebtBank] = [];
+      if (Number(snap.spaylaterWeekly) > 0) {
+        bankMap[latestDebtBank].push({ label: 'SPaylater (Priority #1)', amount: Number(snap.spaylaterWeekly) || 0 });
+      }
+      if (Number(snap.sloanWeekly) > 0) {
+        bankMap[latestDebtBank].push({ label: 'SLoan (Priority #1)', amount: Number(snap.sloanWeekly) || 0 });
+      }
+
+      // 3. Variable Breakdown (always resolve bank dynamically from latest Setup)
+      (snap.variableBreakdown || []).forEach(v => {
+        const matchedCat = setupVarList.find(
+          vc => vc.id === v.id || vc.name.toLowerCase() === (v.name || '').toLowerCase()
+        );
+        const resolvedBank = (matchedCat && matchedCat.bank) || v.bank || configuredBankNames[0] || 'MariBank';
+        const resolvedName = (matchedCat && matchedCat.name) || v.name;
+        if (!bankMap[resolvedBank]) bankMap[resolvedBank] = [];
+
+        if (Number(v.baseAmt) > 0 || Number(v.extraAmt) === 0) {
+          bankMap[resolvedBank].push({ label: `${resolvedName} (Base)`, amount: Number(v.baseAmt) || 0 });
+        }
+        if (Number(v.extraAmt) > 0) {
+          bankMap[resolvedBank].push({ label: `${resolvedName} (Extra)`, amount: Number(v.extraAmt) || 0 });
+        }
+      });
+
+      const entries = Object.entries(bankMap).filter(([, items]) => items.length > 0);
+      let grandTotal = 0;
+      entries.forEach(([, items]) => {
+        grandTotal += items.reduce((s, it) => s + (Number(it.amount) || 0), 0);
+      });
+
+      return {
+        entries,
+        grandTotal: Math.round(grandTotal * 100) / 100
+      };
+    }
+
+    function renderBankCardItemHTML(snapId, bankName, items, isCurrentWeek = true) {
+      const bankTotal = items.reduce((s, it) => s + (Number(it.amount) || 0), 0);
+      const checkKey = `${snapId}_${bankName}`;
+      const isChecked = !!(appState.transferredChecklist && appState.transferredChecklist[checkKey]);
+      const safeBankArg = bankName.replace(/'/g, "\\'");
+      const expandedClass = isCurrentWeek && currentWeekBanksExpanded ? 'open' : '';
+      const chevronRotate = isCurrentWeek && currentWeekBanksExpanded ? 'rotate-180' : '';
+
+      return `
+        <div class="${isCurrentWeek ? 'app-subcard' : 'app-card'} rounded-xl overflow-hidden border transition ${isChecked ? 'border-emerald-500/40 opacity-75' : 'border-transparent hover:border-blue-500/35'}">
+          <div onclick="toggleBankCardAccordion(this)" class="p-3.5 flex items-center justify-between gap-3 cursor-pointer">
+            <div class="flex items-center gap-3 min-w-0">
+              <input type="checkbox" ${isChecked ? 'checked' : ''}
+                onclick="event.stopPropagation(); toggleBankTransferCheck('${snapId}', '${safeBankArg}')"
+                title="Mark ${bankName} transfer complete"
+                class="aesthetic-checkbox" />
+              <div class="min-w-0">
+                <span class="inline-block px-2.5 py-0.5 rounded-md text-xs font-bold ${getBankPillClass(bankName)} ${isChecked ? 'line-through opacity-75' : ''}">
+                  ${bankName}
+                </span>
+                <span class="ml-2 text-[11px]" style="color: var(--text-secondary)">
+                  ${items.length} item${items.length === 1 ? '' : 's'}
+                </span>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-2 shrink-0">
+              <span class="text-sm font-extrabold mono-num ${isChecked ? 'text-emerald-400 line-through' : ''}">
+                ${formatPHP(bankTotal)}
+              </span>
+              <i data-lucide="chevron-down" class="bank-chevron w-4 h-4 text-slate-400 transition-transform duration-200 ${chevronRotate}"></i>
+            </div>
+          </div>
+
+          <div class="bank-accordion accordion-content ${expandedClass}">
+            <div class="accordion-inner">
+              <div class="px-3.5 pb-3.5 pt-2 border-t app-divider space-y-1.5">
+                ${items.map(it => `
+                  <div class="flex items-center justify-between gap-2 text-xs">
+                    <span class="truncate" style="color: var(--text-secondary)">${it.label}</span>
+                    <span class="font-bold mono-num shrink-0">${formatPHP(it.amount)}</span>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderCollapsibleWeekDropdownHTML(snap, isExpanded = false) {
+      const { entries, grandTotal } = buildBankBreakdownForSnapshot(snap);
+      const safeSnapId = snap.id.replace(/'/g, "\\'");
+
+      return `
+        <div class="app-subcard rounded-2xl overflow-hidden border border-transparent hover:border-blue-500/35 transition">
+          <!-- Collapsed Week Dropdown Header -->
+          <div onclick="toggleSavedWeekDropdown('${safeSnapId}')"
+            class="p-3.5 flex items-center justify-between gap-3 cursor-pointer">
+            <div class="flex items-center gap-2.5 min-w-0">
+              <span class="px-2.5 py-1 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-xs font-bold shrink-0">
+                ${snap.weekBadge}
+              </span>
+              <span class="text-[11px] truncate hidden sm:inline" style="color: var(--text-secondary)">
+                ${entries.length} bank${entries.length === 1 ? '' : 's'}
+              </span>
+            </div>
+
+            <div class="flex items-center gap-2 shrink-0">
+              <span class="text-sm font-extrabold text-emerald-400 mono-num">
+                ${formatPHP(grandTotal)}
+              </span>
+              <i id="week-drop-chev-${snap.id}" data-lucide="chevron-down"
+                class="upcoming-week-chevron w-4 h-4 text-slate-400 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}"></i>
+            </div>
+          </div>
+
+          <!-- Expandable Week Dropdown Body -->
+          <div id="week-drop-body-${snap.id}" class="upcoming-week-accordion accordion-content ${isExpanded ? 'open' : ''}">
+            <div class="accordion-inner">
+              <div class="px-3.5 pb-3.5 pt-2.5 border-t app-divider space-y-2.5">
+                <div class="flex items-center justify-between gap-2 text-[11px]">
+                  <span style="color: var(--text-secondary)">
+                    Target Range: <strong>${snap.targetRange || snap.weekBadge}</strong>
+                  </span>
+                  <button type="button" onclick="event.stopPropagation(); loadSavedWeekById('${safeSnapId}')"
+                    class="px-2.5 py-1 rounded-lg bg-blue-600/15 hover:bg-blue-600/25 text-blue-400 border border-blue-500/30 text-[11px] font-semibold transition flex items-center gap-1">
+                    <i data-lucide="arrow-up-right" class="w-3 h-3"></i>
+                    <span>Load in Allocation</span>
+                  </button>
+                </div>
+
+                <div class="space-y-2">
+                  ${entries.length > 0
+                    ? entries.map(([bankName, items]) => renderBankCardItemHTML(snap.id, bankName, items, false)).join('')
+                    : `<div class="text-xs text-center py-4 opacity-60">No allocations recorded for this week.</div>`}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
     function renderSavedPage() {
-      const selector = document.getElementById('saved-week-selector');
-      if (!selector) return;
+      const currentCardsEl = document.getElementById('saved-current-bank-cards');
+      const upcomingListEl = document.getElementById('saved-upcoming-weeks-list');
+      if (!currentCardsEl || !upcomingListEl) return;
 
       if (appState.savedAllocations.length === 0) {
         autoSaveCurrentWeek(true);
       }
 
-      const prevIdx = selector.value;
-      selector.innerHTML = appState.savedAllocations.map((snap, idx) => `
-        <option value="${idx}" ${String(idx) === prevIdx ? 'selected' : ''} class="bg-slate-900 text-white">
-          ${snap.weekBadge}
-        </option>
-      `).join('');
-
-      const activeIdx = Number(selector.value) || 0;
-      const snap = appState.savedAllocations[activeIdx];
-      if (!snap) return;
-
-      const configuredBankNames = appState.banks.map(b => b.name);
-      const bankMap = {};
-      configuredBankNames.forEach(b => { bankMap[b] = []; });
-
-      (snap.fixedItems || []).filter(it => it.enabled !== false).forEach(item => {
-        const b = item.bank || configuredBankNames[0] || 'MariBank';
-        if (!bankMap[b]) bankMap[b] = [];
-        bankMap[b].push({
-          label: item.name,
-          amount: Number(item.weeklyAmount) || 0
-        });
-      });
-
-      const debtBank = snap.debtBank || appState.debtBank || 'ShopeePay';
-      if (!bankMap[debtBank]) bankMap[debtBank] = [];
-      if (snap.spaylaterWeekly > 0) {
-        bankMap[debtBank].push({ label: 'SPaylater (Priority #1)', amount: Number(snap.spaylaterWeekly) || 0 });
-      }
-      if (snap.sloanWeekly > 0) {
-        bankMap[debtBank].push({ label: 'SLoan (Priority #1)', amount: Number(snap.sloanWeekly) || 0 });
+      const activeWeekId = `${appState.targetStartDate}_${appState.targetEndDate}`;
+      let currentSnap = appState.savedAllocations.find(s => s.id === activeWeekId);
+      if (!currentSnap) {
+        autoSaveCurrentWeek(true);
+        currentSnap = appState.savedAllocations.find(s => s.id === activeWeekId) || appState.savedAllocations[0];
       }
 
-      (snap.variableBreakdown || []).forEach(v => {
-        const b = v.bank || configuredBankNames[0] || 'MariBank';
-        if (!bankMap[b]) bankMap[b] = [];
-        if (v.baseAmt > 0 || v.extraAmt === 0) {
-          bankMap[b].push({ label: `${v.name} (Base)`, amount: Number(v.baseAmt) || 0 });
+      // Render Left Panel (1/2): Current Week
+      if (currentSnap) {
+        const badgeEl = document.getElementById('saved-current-week-badge');
+        const rangeEl = document.getElementById('saved-current-week-range');
+        const totalEl = document.getElementById('saved-current-grand-total');
+        if (badgeEl) badgeEl.textContent = currentSnap.weekBadge;
+        if (rangeEl) rangeEl.textContent = currentSnap.targetRange || formatFullRange(currentSnap.targetStartDate, currentSnap.targetEndDate);
+
+        const { entries, grandTotal } = buildBankBreakdownForSnapshot(currentSnap);
+        if (totalEl) totalEl.textContent = formatPHP(grandTotal);
+
+        currentCardsEl.innerHTML = entries.length > 0
+          ? entries.map(([bankName, items]) => renderBankCardItemHTML(currentSnap.id, bankName, items, true)).join('')
+          : `<div class="text-center py-8 text-xs opacity-60">No allocations recorded for the current week yet.</div>`;
+      }
+
+      // Partition other saved weeks into Upcoming Weeks (> current targetStartDate) and Earlier Weeks (< current targetStartDate)
+      const curStart = currentSnap?.targetStartDate || appState.targetStartDate;
+      const upcomingWeeks = appState.savedAllocations
+        .filter(s => s.id !== currentSnap?.id && (s.targetStartDate || '') > curStart)
+        .sort((a, b) => (a.targetStartDate || '').localeCompare(b.targetStartDate || ''));
+
+      const pastWeeks = appState.savedAllocations
+        .filter(s => s.id !== currentSnap?.id && (s.targetStartDate || '') < curStart)
+        .sort((a, b) => (b.targetStartDate || '').localeCompare(a.targetStartDate || ''));
+
+      const upcomingCountEl = document.getElementById('saved-upcoming-count');
+      if (upcomingCountEl) upcomingCountEl.textContent = upcomingWeeks.length;
+
+      upcomingListEl.innerHTML = upcomingWeeks.length > 0
+        ? upcomingWeeks.map(snap => renderCollapsibleWeekDropdownHTML(snap, allUpcomingWeeksExpanded)).join('')
+        : `<div class="text-center py-8 px-4 rounded-xl app-subcard text-xs opacity-65">
+             No upcoming weeks saved yet. Click any future payday on the calendar to plan an upcoming week.
+           </div>`;
+
+      // Earlier Saved Weeks section (collapsed dropdowns)
+      const pastWrapperEl = document.getElementById('saved-past-weeks-wrapper');
+      const pastListEl = document.getElementById('saved-past-weeks-list');
+      const pastCountEl = document.getElementById('saved-past-count');
+      if (pastWrapperEl && pastListEl) {
+        if (pastWeeks.length > 0) {
+          pastWrapperEl.classList.remove('hidden');
+          if (pastCountEl) pastCountEl.textContent = pastWeeks.length;
+          pastListEl.innerHTML = pastWeeks.map(snap => renderCollapsibleWeekDropdownHTML(snap, false)).join('');
+        } else {
+          pastWrapperEl.classList.add('hidden');
         }
-        if (v.extraAmt > 0) {
-          bankMap[b].push({ label: `${v.name} (Extra)`, amount: Number(v.extraAmt) || 0 });
-        }
-      });
-
-      let grandTotal = 0;
-      const entries = Object.entries(bankMap).filter(([, items]) => items.length > 0);
-      entries.forEach(([, items]) => {
-        grandTotal += items.reduce((s, it) => s + (Number(it.amount) || 0), 0);
-      });
-
-      const grandTotalEl = document.getElementById('saved-grand-total');
-      if (grandTotalEl) grandTotalEl.textContent = formatPHP(grandTotal);
-
-      const container = document.getElementById('bank-cards-container');
-      if (!container) return;
-
-      if (entries.length === 0) {
-        container.innerHTML = `<div class="col-span-full text-center py-8 text-xs opacity-60">No allocations recorded for this week yet.</div>`;
-        return;
       }
-
-      container.innerHTML = entries.map(([bankName, items]) => {
-        const bankTotal = items.reduce((s, it) => s + (Number(it.amount) || 0), 0);
-        const checkKey = `${snap.id}_${bankName}`;
-        const isChecked = !!(appState.transferredChecklist && appState.transferredChecklist[checkKey]);
-        const safeBankArg = bankName.replace(/'/g, "\\'");
-
-        return `
-          <div class="app-subcard rounded-2xl overflow-hidden border transition ${isChecked ? 'border-emerald-500/40 opacity-75' : 'border-transparent hover:border-blue-500/35'}">
-            <div onclick="toggleBankCardAccordion(this)" class="p-4 flex items-center justify-between gap-3 cursor-pointer">
-              <div class="flex items-center gap-3 min-w-0">
-                <input type="checkbox" ${isChecked ? 'checked' : ''}
-                  onclick="event.stopPropagation(); toggleBankTransferCheck('${snap.id}', '${safeBankArg}')"
-                  title="Mark ${bankName} transfer complete"
-                  class="aesthetic-checkbox" />
-                <div class="min-w-0">
-                  <span class="inline-block px-2.5 py-0.5 rounded-md text-xs font-bold ${getBankPillClass(bankName)} ${isChecked ? 'line-through opacity-75' : ''}">
-                    ${bankName}
-                  </span>
-                  <div class="text-[11px] mt-1" style="color: var(--text-secondary)">
-                    ${items.length} item${items.length === 1 ? '' : 's'}
-                  </div>
-                </div>
-              </div>
-
-              <div class="flex items-center gap-2 shrink-0">
-                <span class="text-sm font-extrabold mono-num ${isChecked ? 'text-emerald-400 line-through' : ''}">
-                  ${formatPHP(bankTotal)}
-                </span>
-                <i data-lucide="chevron-down" class="bank-chevron w-4 h-4 text-slate-400 transition-transform duration-200 ${allBankCardsExpanded ? 'rotate-180' : ''}"></i>
-              </div>
-            </div>
-
-            <div class="bank-accordion accordion-content ${allBankCardsExpanded ? 'open' : ''}">
-              <div class="accordion-inner">
-                <div class="px-4 pb-4 pt-2 border-t app-divider space-y-2">
-                  ${items.map(it => `
-                    <div class="flex items-center justify-between gap-2 text-xs">
-                      <span class="truncate" style="color: var(--text-secondary)">${it.label}</span>
-                      <span class="font-bold mono-num shrink-0">${formatPHP(it.amount)}</span>
-                    </div>
-                  `).join('')}
-                </div>
-              </div>
-            </div>
-          </div>
-        `;
-      }).join('');
 
       if (window.lucide) lucide.createIcons();
     }
 
     function toggleBankCardAccordion(headerEl) {
-      const card = headerEl.closest('.app-subcard');
+      const card = headerEl.closest('.app-subcard, .app-card');
       if (!card) return;
       const content = card.querySelector('.bank-accordion');
       const chevron = card.querySelector('.bank-chevron');
@@ -3429,15 +3626,38 @@ service cloud.firestore {
       if (chevron) chevron.classList.toggle('rotate-180');
     }
 
-    function toggleAllBankCards() {
-      allBankCardsExpanded = !allBankCardsExpanded;
-      const btn = document.getElementById('toggle-all-banks-btn');
-      if (btn) btn.textContent = allBankCardsExpanded ? 'Collapse All' : 'Expand All';
-      document.querySelectorAll('.bank-accordion').forEach(el => {
-        el.classList.toggle('open', allBankCardsExpanded);
+    function toggleCurrentWeekBankCards() {
+      currentWeekBanksExpanded = !currentWeekBanksExpanded;
+      const btn = document.getElementById('toggle-current-banks-btn');
+      if (btn) btn.textContent = currentWeekBanksExpanded ? 'Collapse All' : 'Expand All';
+      const container = document.getElementById('saved-current-bank-cards');
+      if (!container) return;
+      container.querySelectorAll('.bank-accordion').forEach(el => {
+        el.classList.toggle('open', currentWeekBanksExpanded);
       });
-      document.querySelectorAll('.bank-chevron').forEach(el => {
-        el.classList.toggle('rotate-180', allBankCardsExpanded);
+      container.querySelectorAll('.bank-chevron').forEach(el => {
+        el.classList.toggle('rotate-180', currentWeekBanksExpanded);
+      });
+    }
+
+    function toggleSavedWeekDropdown(snapId) {
+      const body = document.getElementById(`week-drop-body-${snapId}`);
+      const chev = document.getElementById(`week-drop-chev-${snapId}`);
+      if (body) body.classList.toggle('open');
+      if (chev) chev.classList.toggle('rotate-180');
+    }
+
+    function toggleAllUpcomingWeeks() {
+      allUpcomingWeeksExpanded = !allUpcomingWeeksExpanded;
+      const btn = document.getElementById('toggle-upcoming-weeks-btn');
+      if (btn) btn.textContent = allUpcomingWeeksExpanded ? 'Collapse All' : 'Expand All';
+      const container = document.getElementById('saved-upcoming-weeks-list');
+      if (!container) return;
+      container.querySelectorAll('.upcoming-week-accordion').forEach(el => {
+        el.classList.toggle('open', allUpcomingWeeksExpanded);
+      });
+      container.querySelectorAll('.upcoming-week-chevron').forEach(el => {
+        el.classList.toggle('rotate-180', allUpcomingWeeksExpanded);
       });
     }
 
@@ -3449,10 +3669,8 @@ service cloud.firestore {
       recordAccountActivity('Saved', `${appState.transferredChecklist[key] ? 'Checked' : 'Unchecked'} ${bankName} transfer (${snapId})`, true);
     }
 
-    function loadSelectedSavedWeekToAllocation() {
-      const selector = document.getElementById('saved-week-selector');
-      const activeIdx = Number(selector?.value) || 0;
-      const snap = appState.savedAllocations[activeIdx];
+    function loadSavedWeekById(snapId) {
+      const snap = (appState.savedAllocations || []).find(s => s.id === snapId);
       if (!snap) return;
       applySnapshotToAllocation(snap, false);
       navigateTo('allocation');
@@ -3460,12 +3678,285 @@ service cloud.firestore {
       showToast(`Loaded ${snap.weekBadge} into Allocation!`);
     }
 
-    // ==================== PAGE 4: SETUP (BANKS, FIXED, VARIABLE % & DEBT-FIRST PRIORITY) ====================
+    // ==================== PAGE 4: SETUP (BANKS, FIXED, VARIABLE % & CROSS-WEEK SYNC) ====================
     function getBankOptionsHTML(selectedBank) {
       const banks = appState.banks || DEFAULT_BANKS;
       return banks.map(b => `
         <option value="${b.name}" ${b.name === selectedBank ? 'selected' : ''}>${b.name}</option>
       `).join('');
+    }
+
+    function syncSetupChangesAcrossAllWeeks() {
+      if (!Array.isArray(appState.savedAllocations)) return;
+
+      const latestDebtBank = appState.debtBank || 'ShopeePay';
+      const latestFixed = appState.fixedItems || [];
+      const latestVarCats = appState.variableCategories || [];
+
+      appState.savedAllocations.forEach(snap => {
+        snap.debtBank = latestDebtBank;
+
+        // Reconcile each saved week's fixedItems with the updated Setup fixedItems
+        const existingFixed = Array.isArray(snap.fixedItems) ? snap.fixedItems : [];
+        snap.fixedItems = latestFixed.map(setupItem => {
+          const prev = existingFixed.find(
+            ef => ef.id === setupItem.id || ef.name.toLowerCase() === setupItem.name.toLowerCase()
+          );
+          if (prev) {
+            return {
+              ...prev,
+              id: setupItem.id,
+              name: setupItem.name,
+              cycleLabel: setupItem.cycleLabel,
+              bank: setupItem.bank
+            };
+          }
+          return JSON.parse(JSON.stringify(setupItem));
+        });
+
+        // Recompute that week's fixed total & variable breakdown using updated banks & percentages
+        const recurringFixedTotal = snap.fixedItems
+          .filter(it => it.enabled !== false)
+          .reduce((s, it) => s + (Number(it.weeklyAmount) || 0), 0);
+        const debtTotal = (Number(snap.spaylaterWeekly) || 0) + (Number(snap.sloanWeekly) || 0);
+        snap.totalFixed = Math.round((recurringFixedTotal + debtTotal) * 100) / 100;
+
+        const baseInc = Number(snap.baseIncome) || 0;
+        const extraInc = Number(snap.extraIncome) || 0;
+        const remainingBase = Math.max(0, Math.round((baseInc - snap.totalFixed) * 100) / 100);
+
+        snap.variableBreakdown = latestVarCats.map(cat => ({
+          ...cat,
+          baseAmt: (remainingBase * (Number(cat.pct) || 0)) / 100,
+          extraAmt: (extraInc * (Number(cat.pct) || 0)) / 100,
+          totalAmt: ((remainingBase + extraInc) * (Number(cat.pct) || 0)) / 100
+        }));
+        snap.updatedAt = Date.now();
+      });
+    }
+
+    function updateDebtBank(bankName) {
+      appState.debtBank = bankName;
+      syncLockedDebtsToAllocation(false);
+      autoSaveCurrentWeek(true);
+      syncSetupChangesAcrossAllWeeks();
+      renderSavedPage();
+      renderSetupPage();
+      persistUserData(true);
+      recordAccountActivity('Setup', `Assigned Priority #1 debts to ${bankName} across all weeks`, true);
+      showToast(`Debt settlement wallet updated to ${bankName} across all weeks`);
+    }
+
+    function handleAddBank(e) {
+      e.preventDefault();
+      const nameInput = document.getElementById('setup-new-bank-name');
+      const styleSelect = document.getElementById('setup-new-bank-style');
+      const name = nameInput.value.trim();
+      if (!name) return;
+
+      if (appState.banks.some(b => b.name.toLowerCase() === name.toLowerCase())) {
+        showToast('Bank already exists.');
+        return;
+      }
+
+      appState.banks.push({ name, pillClass: styleSelect.value || 'pill-blue' });
+      nameInput.value = '';
+      renderSetupPage();
+      persistUserData(true);
+      recordAccountActivity('Setup', `Added bank: ${name}`, true);
+      showToast(`Added bank: ${name}`);
+    }
+
+    function deleteBank(bankName) {
+      if (appState.banks.length <= 1) return;
+      appState.banks = appState.banks.filter(b => b.name !== bankName);
+      const fallback = appState.banks[0].name;
+
+      if (appState.debtBank === bankName) appState.debtBank = fallback;
+      appState.fixedItems.forEach(f => { if (f.bank === bankName) f.bank = fallback; });
+      appState.variableCategories.forEach(v => { if (v.bank === bankName) v.bank = fallback; });
+
+      syncLockedDebtsToAllocation(false);
+      renderFixedExpensesList();
+      recalculateBudget();
+      autoSaveCurrentWeek(true);
+      syncSetupChangesAcrossAllWeeks();
+      renderSavedPage();
+      renderSetupPage();
+      persistUserData(true);
+      recordAccountActivity('Setup', `Removed bank ${bankName} (reassigned to ${fallback} across all weeks)`, true);
+      showToast(`Removed ${bankName} & reassigned items to ${fallback}`);
+    }
+
+    function handleAddFixedSetup(e) {
+      e.preventDefault();
+      const name = document.getElementById('setup-fixed-name').value.trim();
+      const cycle = document.getElementById('setup-fixed-cycle').value.trim() || 'weekly';
+      const amt = evaluateMathExpr(document.getElementById('setup-fixed-amount').value);
+      const bank = document.getElementById('setup-fixed-bank').value;
+      if (!name) return;
+
+      appState.fixedItems.push({
+        id: 'fixed-' + Date.now(),
+        name,
+        cycleLabel: cycle,
+        bank,
+        weeklyAmount: amt,
+        enabled: true,
+        locked: false
+      });
+
+      document.getElementById('setup-fixed-name').value = '';
+      document.getElementById('setup-fixed-cycle').value = '';
+      document.getElementById('setup-fixed-amount').value = '';
+
+      renderFixedExpensesList();
+      recalculateBudget();
+      autoSaveCurrentWeek(true);
+      syncSetupChangesAcrossAllWeeks();
+      renderSavedPage();
+      renderSetupPage();
+      persistUserData(true);
+      recordAccountActivity('Setup', `Added fixed expense: ${name} (${formatPHP(amt)}/wk → ${bank})`, true);
+      showToast(`Added fixed expense: ${name} & synced all weeks`);
+    }
+
+    function updateSetupFixedField(id, field, val) {
+      const item = appState.fixedItems.find(f => f.id === id);
+      if (!item) return;
+
+      if (field === 'weeklyAmount') {
+        item.weeklyAmount = evaluateMathExpr(val);
+      } else if (field === 'enabled') {
+        item.enabled = !!val;
+      } else {
+        item[field] = val;
+      }
+
+      renderFixedExpensesList();
+      recalculateBudget();
+      autoSaveCurrentWeek(true);
+      syncSetupChangesAcrossAllWeeks();
+      renderSavedPage();
+      renderSetupPage();
+      persistUserData(true);
+      recordAccountActivity('Setup', `Updated fixed expense ${item.name} (${field}) across all weeks`, true);
+      showToast(`Synced ${item.name} across all weeks`);
+    }
+
+    function deleteSetupFixed(id) {
+      const removed = appState.fixedItems.find(f => f.id === id);
+      appState.fixedItems = appState.fixedItems.filter(f => f.id !== id);
+      renderFixedExpensesList();
+      recalculateBudget();
+      autoSaveCurrentWeek(true);
+      syncSetupChangesAcrossAllWeeks();
+      renderSavedPage();
+      renderSetupPage();
+      persistUserData(true);
+      if (removed) recordAccountActivity('Setup', `Deleted fixed expense: ${removed.name}`, true);
+      showToast('Fixed expense removed across all weeks.');
+    }
+
+    function handleAddVariableSetup(e) {
+      e.preventDefault();
+      const name = document.getElementById('setup-var-name').value.trim();
+      const pct = Math.max(0, Math.min(100, Number(document.getElementById('setup-var-pct').value) || 0));
+      const bank = document.getElementById('setup-var-bank').value;
+      if (!name) return;
+
+      const dotColors = ['bg-orange-400', 'bg-purple-400', 'bg-emerald-400', 'bg-blue-400', 'bg-amber-400', 'bg-pink-400', 'bg-cyan-400'];
+      const textColors = ['text-orange-400', 'text-purple-400', 'text-emerald-400', 'text-blue-400', 'text-amber-400', 'text-pink-400', 'text-cyan-400'];
+      const colorIdx = appState.variableCategories.length % dotColors.length;
+
+      appState.variableCategories.push({
+        id: 'var-' + Date.now(),
+        name,
+        pct,
+        bank,
+        dotColor: dotColors[colorIdx],
+        extraTextColor: textColors[colorIdx]
+      });
+
+      document.getElementById('setup-var-name').value = '';
+      document.getElementById('setup-var-pct').value = '';
+
+      recalculateBudget();
+      autoSaveCurrentWeek(true);
+      syncSetupChangesAcrossAllWeeks();
+      renderSavedPage();
+      renderSetupPage();
+      persistUserData(true);
+      recordAccountActivity('Setup', `Added variable category: ${name} (${pct}% → ${bank})`, true);
+      showToast(`Added variable category: ${name} & synced all weeks`);
+    }
+
+    function updateSetupVariableField(id, field, val) {
+      const cat = appState.variableCategories.find(c => c.id === id);
+      if (!cat) return;
+
+      if (field === 'pct') {
+        cat.pct = Math.max(0, Math.min(100, Number(val) || 0));
+      } else {
+        cat[field] = val;
+      }
+
+      recalculateBudget();
+      autoSaveCurrentWeek(true);
+      syncSetupChangesAcrossAllWeeks();
+      renderSavedPage();
+      renderSetupPage();
+      persistUserData(true);
+      recordAccountActivity('Setup', `Updated variable category ${cat.name} (${field}) across all weeks`, true);
+      showToast(`Synced ${cat.name} across all weeks`);
+    }
+
+    function autoBalanceVariablePercentages() {
+      const cats = appState.variableCategories;
+      if (!cats || cats.length === 0) return;
+      const total = cats.reduce((s, c) => s + (Number(c.pct) || 0), 0);
+      if (total <= 0) {
+        const even = Math.floor(100 / cats.length);
+        cats.forEach((c, idx) => {
+          c.pct = idx === 0 ? 100 - even * (cats.length - 1) : even;
+        });
+      } else {
+        let running = 0;
+        cats.forEach((c, idx) => {
+          if (idx === cats.length - 1) {
+            c.pct = Math.max(0, 100 - running);
+          } else {
+            const scaled = Math.round(((Number(c.pct) || 0) / total) * 100);
+            c.pct = scaled;
+            running += scaled;
+          }
+        });
+      }
+      recalculateBudget();
+      autoSaveCurrentWeek(true);
+      syncSetupChangesAcrossAllWeeks();
+      renderSavedPage();
+      renderSetupPage();
+      persistUserData(true);
+      recordAccountActivity('Setup', 'Auto-balanced variable percentages to 100% across all weeks', true);
+      showToast('Variable percentages balanced to 100% across all weeks!');
+    }
+
+    function deleteSetupVariable(id) {
+      if (appState.variableCategories.length <= 1) {
+        showToast('At least one variable category is required.');
+        return;
+      }
+      const removed = appState.variableCategories.find(c => c.id === id);
+      appState.variableCategories = appState.variableCategories.filter(c => c.id !== id);
+      recalculateBudget();
+      autoSaveCurrentWeek(true);
+      syncSetupChangesAcrossAllWeeks();
+      renderSavedPage();
+      renderSetupPage();
+      persistUserData(true);
+      if (removed) recordAccountActivity('Setup', `Deleted variable category: ${removed.name}`, true);
+      showToast('Variable category removed across all weeks.');
     }
 
     function renderSetupPage() {
@@ -3606,199 +4097,6 @@ service cloud.firestore {
       `).join('');
 
       if (window.lucide) lucide.createIcons();
-    }
-
-    function updateDebtBank(bankName) {
-      appState.debtBank = bankName;
-      syncLockedDebtsToAllocation(false);
-      autoSaveCurrentWeek(true);
-      renderSetupPage();
-      recordAccountActivity('Setup', `Assigned Priority #1 debts to ${bankName}`, true);
-      showToast(`Debt settlement wallet updated to ${bankName}`);
-    }
-
-    function handleAddBank(e) {
-      e.preventDefault();
-      const nameInput = document.getElementById('setup-new-bank-name');
-      const styleSelect = document.getElementById('setup-new-bank-style');
-      const name = nameInput.value.trim();
-      if (!name) return;
-
-      if (appState.banks.some(b => b.name.toLowerCase() === name.toLowerCase())) {
-        showToast('Bank already exists.');
-        return;
-      }
-
-      appState.banks.push({ name, pillClass: styleSelect.value || 'pill-blue' });
-      nameInput.value = '';
-      renderSetupPage();
-      recordAccountActivity('Setup', `Added bank: ${name}`, true);
-      showToast(`Added bank: ${name}`);
-    }
-
-    function deleteBank(bankName) {
-      if (appState.banks.length <= 1) return;
-      appState.banks = appState.banks.filter(b => b.name !== bankName);
-      const fallback = appState.banks[0].name;
-
-      if (appState.debtBank === bankName) appState.debtBank = fallback;
-      appState.fixedItems.forEach(f => { if (f.bank === bankName) f.bank = fallback; });
-      appState.variableCategories.forEach(v => { if (v.bank === bankName) v.bank = fallback; });
-
-      syncLockedDebtsToAllocation(false);
-      recalculateBudget();
-      autoSaveCurrentWeek(true);
-      renderSetupPage();
-      recordAccountActivity('Setup', `Removed bank ${bankName} (reassigned to ${fallback})`, true);
-      showToast(`Removed ${bankName} & reassigned items to ${fallback}`);
-    }
-
-    function handleAddFixedSetup(e) {
-      e.preventDefault();
-      const name = document.getElementById('setup-fixed-name').value.trim();
-      const cycle = document.getElementById('setup-fixed-cycle').value.trim() || 'weekly';
-      const amt = evaluateMathExpr(document.getElementById('setup-fixed-amount').value);
-      const bank = document.getElementById('setup-fixed-bank').value;
-      if (!name) return;
-
-      appState.fixedItems.push({
-        id: 'fixed-' + Date.now(),
-        name,
-        cycleLabel: cycle,
-        bank,
-        weeklyAmount: amt,
-        enabled: true,
-        locked: false
-      });
-
-      document.getElementById('setup-fixed-name').value = '';
-      document.getElementById('setup-fixed-cycle').value = '';
-      document.getElementById('setup-fixed-amount').value = '';
-
-      renderFixedExpensesList();
-      recalculateBudget();
-      autoSaveCurrentWeek(true);
-      renderSetupPage();
-      recordAccountActivity('Setup', `Added fixed expense: ${name} (${formatPHP(amt)}/wk → ${bank})`, true);
-      showToast(`Added fixed expense: ${name}`);
-    }
-
-    function updateSetupFixedField(id, field, val) {
-      const item = appState.fixedItems.find(f => f.id === id);
-      if (!item) return;
-
-      if (field === 'weeklyAmount') {
-        item.weeklyAmount = evaluateMathExpr(val);
-      } else if (field === 'enabled') {
-        item.enabled = !!val;
-      } else {
-        item[field] = val;
-      }
-
-      renderFixedExpensesList();
-      recalculateBudget();
-      autoSaveCurrentWeek(true);
-      renderSetupPage();
-      recordAccountActivity('Setup', `Updated fixed expense ${item.name} (${field})`, true);
-    }
-
-    function deleteSetupFixed(id) {
-      const removed = appState.fixedItems.find(f => f.id === id);
-      appState.fixedItems = appState.fixedItems.filter(f => f.id !== id);
-      renderFixedExpensesList();
-      recalculateBudget();
-      autoSaveCurrentWeek(true);
-      renderSetupPage();
-      if (removed) recordAccountActivity('Setup', `Deleted fixed expense: ${removed.name}`, true);
-      showToast('Fixed expense removed.');
-    }
-
-    function handleAddVariableSetup(e) {
-      e.preventDefault();
-      const name = document.getElementById('setup-var-name').value.trim();
-      const pct = Math.max(0, Math.min(100, Number(document.getElementById('setup-var-pct').value) || 0));
-      const bank = document.getElementById('setup-var-bank').value;
-      if (!name) return;
-
-      const dotColors = ['bg-orange-400', 'bg-purple-400', 'bg-emerald-400', 'bg-blue-400', 'bg-amber-400', 'bg-pink-400', 'bg-cyan-400'];
-      const textColors = ['text-orange-400', 'text-purple-400', 'text-emerald-400', 'text-blue-400', 'text-amber-400', 'text-pink-400', 'text-cyan-400'];
-      const colorIdx = appState.variableCategories.length % dotColors.length;
-
-      appState.variableCategories.push({
-        id: 'var-' + Date.now(),
-        name,
-        pct,
-        bank,
-        dotColor: dotColors[colorIdx],
-        extraTextColor: textColors[colorIdx]
-      });
-
-      document.getElementById('setup-var-name').value = '';
-      document.getElementById('setup-var-pct').value = '';
-
-      recalculateBudget();
-      autoSaveCurrentWeek(true);
-      renderSetupPage();
-      recordAccountActivity('Setup', `Added variable category: ${name} (${pct}% → ${bank})`, true);
-      showToast(`Added variable category: ${name}`);
-    }
-
-    function updateSetupVariableField(id, field, val) {
-      const cat = appState.variableCategories.find(c => c.id === id);
-      if (!cat) return;
-
-      if (field === 'pct') {
-        cat.pct = Math.max(0, Math.min(100, Number(val) || 0));
-      } else {
-        cat[field] = val;
-      }
-
-      recalculateBudget();
-      autoSaveCurrentWeek(true);
-      renderSetupPage();
-      recordAccountActivity('Setup', `Updated variable category ${cat.name} (${field})`, true);
-    }
-
-    function autoBalanceVariablePercentages() {
-      const cats = appState.variableCategories;
-      if (!cats || cats.length === 0) return;
-      const total = cats.reduce((s, c) => s + (Number(c.pct) || 0), 0);
-      if (total <= 0) {
-        const even = Math.floor(100 / cats.length);
-        cats.forEach((c, idx) => {
-          c.pct = idx === 0 ? 100 - even * (cats.length - 1) : even;
-        });
-      } else {
-        let running = 0;
-        cats.forEach((c, idx) => {
-          if (idx === cats.length - 1) {
-            c.pct = Math.max(0, 100 - running);
-          } else {
-            const scaled = Math.round(((Number(c.pct) || 0) / total) * 100);
-            c.pct = scaled;
-            running += scaled;
-          }
-        });
-      }
-      recalculateBudget();
-      autoSaveCurrentWeek(true);
-      renderSetupPage();
-      recordAccountActivity('Setup', 'Auto-balanced variable percentages to 100%', true);
-      showToast('Variable percentages balanced to 100%!');
-    }
-
-    function deleteSetupVariable(id) {
-      if (appState.variableCategories.length <= 1) {
-        showToast('At least one variable category is required.');
-        return;
-      }
-      const removed = appState.variableCategories.find(c => c.id === id);
-      appState.variableCategories = appState.variableCategories.filter(c => c.id !== id);
-      recalculateBudget();
-      autoSaveCurrentWeek(true);
-      renderSetupPage();
-      if (removed) recordAccountActivity('Setup', `Deleted variable category: ${removed.name}`, true);
-      showToast('Variable category removed.');
     }
 
     // ==================== TOAST & FULL UI REFRESH ====================
