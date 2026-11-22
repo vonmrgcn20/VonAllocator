@@ -370,6 +370,12 @@
             <span class="sidebar-label hidden whitespace-nowrap">Saved</span>
           </button>
 
+          <button onclick="navigateTo('old-weeks')" id="nav-old-weeks" title="Previous Old Weeks"
+            class="nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold opacity-70 hover:opacity-100 hover:bg-slate-500/10 transition">
+            <i data-lucide="archive" class="w-4 h-4 shrink-0"></i>
+            <span class="sidebar-label hidden whitespace-nowrap">Previous Old Weeks</span>
+          </button>
+
           <button onclick="navigateTo('setup')" id="nav-setup" title="Setup Expenses & Banks"
             class="nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold opacity-70 hover:opacity-100 hover:bg-slate-500/10 transition">
             <i data-lucide="sliders-horizontal" class="w-4 h-4 shrink-0"></i>
@@ -451,7 +457,7 @@
               </div>
 
               <p class="text-[10px] mb-2" style="color: var(--text-secondary)">
-                Click your payday date &rarr; budgets for the following week.
+                <strong>Click</strong> payday &rarr; next week &bull; <strong>Drag</strong> &rarr; custom target week.
               </p>
 
               <div class="grid grid-cols-7 gap-1 text-center text-[9px] font-bold uppercase tracking-wider mb-1" style="color: var(--text-muted)">
@@ -461,6 +467,11 @@
               <div id="mini-calendar-grid" class="grid grid-cols-7 gap-1"></div>
 
               <div class="mt-3 pt-2.5 border-t app-divider space-y-1.5 text-[11px]">
+                <div class="flex items-center justify-between">
+                  <span class="text-amber-400 font-semibold">Today:</span>
+                  <button type="button" onclick="jumpToTodayMonth()" id="mini-cal-today-label"
+                    class="font-bold text-amber-400 hover:underline cursor-pointer">Nov 22, 2026</button>
+                </div>
                 <div class="flex items-center justify-between">
                   <span class="text-blue-400 font-semibold">Payday / Sahod:</span>
                   <span id="mini-cal-income-range" class="font-bold">Nov 16, 2026</span>
@@ -565,17 +576,24 @@
                     <span>Paycheck-to-Expense Calendar</span>
                   </h3>
                   <p class="text-[11px] mt-1" style="color: var(--text-secondary)">
-                    <strong>Click once</strong> on your payday date &rarr; automatically maps next week as your budget week
+                    <strong>Click</strong> payday &rarr; auto next week &bull; <strong>Drag</strong> &rarr; custom target budget week
                   </p>
                 </div>
-                <div class="flex items-center gap-1 app-subcard p-1 rounded-xl">
-                  <button type="button" onclick="changeCalMonth(-1)" class="p-1.5 rounded-lg hover:bg-slate-500/15 transition">
-                    <i data-lucide="chevron-left" class="w-3.5 h-3.5"></i>
+                <div class="flex items-center gap-1.5">
+                  <button type="button" onclick="jumpToTodayMonth()" title="Jump to Today's Month"
+                    class="px-2.5 py-1.5 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/35 text-amber-400 text-[11px] font-bold flex items-center gap-1.5 transition cursor-pointer">
+                    <span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
+                    <span id="cal-today-btn-text">Today</span>
                   </button>
-                  <span id="cal-month-label" class="px-2 text-xs font-bold min-w-[110px] text-center">November 2026</span>
-                  <button type="button" onclick="changeCalMonth(1)" class="p-1.5 rounded-lg hover:bg-slate-500/15 transition">
-                    <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
-                  </button>
+                  <div class="flex items-center gap-1 app-subcard p-1 rounded-xl">
+                    <button type="button" onclick="changeCalMonth(-1)" class="p-1.5 rounded-lg hover:bg-slate-500/15 transition">
+                      <i data-lucide="chevron-left" class="w-3.5 h-3.5"></i>
+                    </button>
+                    <span id="cal-month-label" class="px-2 text-xs font-bold min-w-[110px] text-center">November 2026</span>
+                    <button type="button" onclick="changeCalMonth(1)" class="p-1.5 rounded-lg hover:bg-slate-500/15 transition">
+                      <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -584,28 +602,12 @@
               </div>
 
               <div id="calendar-grid" class="grid grid-cols-7 gap-1"></div>
-            </div>
 
-            <div class="mt-4 pt-3.5 border-t app-divider grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-              <div class="p-2.5 rounded-xl bg-blue-500/10 border border-blue-500/25">
-                <div class="text-[10px] font-bold uppercase tracking-wider text-blue-400 flex items-center justify-between">
-                  <span>1. Payday / Sahod Window</span>
-                  <span id="cal-selected-date-pill" class="px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-300 text-[10px]">Payday</span>
-                </div>
-                <div id="cal-income-range-text" class="text-xs font-bold mt-1">Nov 16, 2026</div>
-              </div>
-              <div class="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/25">
-                <div class="text-[10px] font-bold uppercase tracking-wider text-emerald-400 flex items-center justify-between gap-1">
-                  <span class="flex items-center gap-1">
-                    <i data-lucide="arrow-right-circle" class="w-3 h-3"></i>
-                    <span>2. Target Budget Week</span>
-                  </span>
-                  <button type="button" id="cal-this-week-btn" onclick="useSelectedDateWeekAsTarget()" title="Set the clicked date's own week as the Target Budget Week"
-                    class="px-1.5 py-0.5 rounded bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 text-[9px] font-bold transition cursor-pointer">
-                    Use Nov 16–22
-                  </button>
-                </div>
-                <div id="cal-target-range-text" class="text-xs font-bold mt-1">Nov 23 – Nov 29, 2026</div>
+              <!-- Calendar Legend -->
+              <div class="flex flex-wrap items-center gap-3.5 text-[10px] mt-2.5" style="color: var(--text-secondary)">
+                <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-amber-400 inline-block"></span> Today</span>
+                <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-blue-500 inline-block"></span> Payday (Click)</span>
+                <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-emerald-400 inline-block"></span> Target Budget Week (Drag or Auto)</span>
               </div>
             </div>
           </div>
@@ -649,7 +651,7 @@
               <div class="mt-4 pt-3 border-t app-divider">
                 <div class="flex items-center justify-between mb-1.5">
                   <span class="text-[10px] font-bold uppercase tracking-wider" style="color: var(--text-secondary)">
-                    Saved Weeks (Click to Reflect)
+                    Active &amp; Upcoming Weeks
                   </span>
                   <span id="week-saved-badge" class="text-[10px] font-semibold text-emerald-400">
                     Auto-Saved
@@ -681,7 +683,7 @@
                   </div>
                   <div>
                     <h3 class="text-sm font-bold">Fixed Weekly Expenses</h3>
-                    <p class="text-[11px]" style="color: var(--text-secondary)">Lock icon prevents accidental edits</p>
+                    <p class="text-[11px]" style="color: var(--text-secondary)">Always locked &bull; Edit amounts in Setup or Debts</p>
                   </div>
                 </div>
               </div>
@@ -691,14 +693,17 @@
                 <!-- Rendered via JS -->
               </div>
 
-              <!-- Double Divider + Debt Rows (SPaylater & SLoan — Priority #1) -->
+              <!-- Double Divider + Debt Rows (SPaylater & SLoan — Always Locked & Synced with Debts Page) -->
               <div class="mt-2 pt-2 border-t-2 app-divider divide-y app-divider">
                 <div class="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-amber-400 pb-1">
-                  <span>1st Priority: Active Debts</span>
+                  <span class="flex items-center gap-1">
+                    <i data-lucide="lock" class="w-3 h-3"></i>
+                    <span>1st Priority: Active Debts (Synced)</span>
+                  </span>
                   <span id="debt-priority-bank-pill" class="px-1.5 py-0.2 rounded pill-shopeepay text-[9px]">ShopeePay</span>
                 </div>
 
-                <!-- SPaylater Row -->
+                <!-- SPaylater Row (Always Locked) -->
                 <div class="py-2.5 flex items-center justify-between gap-2">
                   <div class="min-w-0 flex-1">
                     <div class="text-xs font-semibold text-amber-400 truncate" id="spaylater-row-label">
@@ -707,21 +712,20 @@
                   </div>
                   <div class="flex items-center gap-1.5 shrink-0">
                     <span id="spaylater-bank-badge" class="px-2 py-0.5 rounded-md text-[10px] font-semibold pill-shopeepay">ShopeePay</span>
-                    <button type="button" id="lock-btn-spaylater" onclick="toggleDebtRowLock('spaylater')" title="Lock / Unlock SPaylater input"
-                      class="p-1.5 rounded-lg app-subcard text-slate-400 hover:text-amber-400 transition">
-                      <i id="lock-icon-spaylater" data-lucide="unlock" class="w-3.5 h-3.5"></i>
-                    </button>
+                    <span title="Locked & synced from Debts page"
+                      class="p-1.5 rounded-lg app-subcard text-amber-400 border border-amber-500/35 flex items-center justify-center">
+                      <i data-lucide="lock" class="w-3.5 h-3.5"></i>
+                    </span>
                     <div class="relative w-20">
                       <span class="absolute left-2 top-1/2 -translate-y-1/2 text-[11px] font-bold text-amber-400">₱</span>
-                      <input id="fixed-spaylater" type="text" value="367.50"
-                        oninput="handleDebtInputOverride('spaylater', this.value)"
-                        placeholder="0.00"
-                        class="w-full pl-5 pr-1.5 py-1 rounded-lg app-input text-right text-xs font-bold text-amber-400 mono-num disabled:opacity-60 disabled:cursor-not-allowed" />
+                      <input id="fixed-spaylater" type="text" value="367.50" disabled readonly
+                        title="Locked — managed in Debts page"
+                        class="w-full pl-5 pr-1.5 py-1 rounded-lg app-input text-right text-xs font-bold text-amber-400 mono-num opacity-80 cursor-not-allowed" />
                     </div>
                   </div>
                 </div>
 
-                <!-- SLoan Row -->
+                <!-- SLoan Row (Always Locked) -->
                 <div class="py-2.5 flex items-center justify-between gap-2">
                   <div class="min-w-0 flex-1">
                     <div class="text-xs font-semibold text-amber-400 truncate" id="sloan-row-label">
@@ -730,65 +734,65 @@
                   </div>
                   <div class="flex items-center gap-1.5 shrink-0">
                     <span id="sloan-bank-badge" class="px-2 py-0.5 rounded-md text-[10px] font-semibold pill-shopeepay">ShopeePay</span>
-                    <button type="button" id="lock-btn-sloan" onclick="toggleDebtRowLock('sloan')" title="Lock / Unlock SLoan input"
-                      class="p-1.5 rounded-lg app-subcard text-slate-400 hover:text-amber-400 transition">
-                      <i id="lock-icon-sloan" data-lucide="unlock" class="w-3.5 h-3.5"></i>
-                    </button>
+                    <span title="Locked & synced from Debts page"
+                      class="p-1.5 rounded-lg app-subcard text-amber-400 border border-amber-500/35 flex items-center justify-center">
+                      <i data-lucide="lock" class="w-3.5 h-3.5"></i>
+                    </span>
                     <div class="relative w-20">
                       <span class="absolute left-2 top-1/2 -translate-y-1/2 text-[11px] font-bold text-amber-400">₱</span>
-                      <input id="fixed-sloan" type="text" value="0.00"
-                        oninput="handleDebtInputOverride('sloan', this.value)"
-                        placeholder="0.00"
-                        class="w-full pl-5 pr-1.5 py-1 rounded-lg app-input text-right text-xs font-bold text-amber-400 mono-num disabled:opacity-60 disabled:cursor-not-allowed" />
+                      <input id="fixed-sloan" type="text" value="0.00" disabled readonly
+                        title="Locked — managed in Debts page"
+                        class="w-full pl-5 pr-1.5 py-1 rounded-lg app-input text-right text-xs font-bold text-amber-400 mono-num opacity-80 cursor-not-allowed" />
                     </div>
                   </div>
                 </div>
               </div>
             </div>
 
-            <!-- Total Fixed + Debt Obligations Footer -->
-            <div class="mt-3 pt-3.5 border-t app-divider flex items-center justify-between">
-              <span class="text-xs font-bold">Total Debts + Fixed</span>
-              <span id="fixed-expenses-total" class="text-sm font-extrabold text-rose-500 mono-num">₱1,191.58</span>
+            <div class="mt-4 pt-3.5 border-t app-divider flex items-center justify-between">
+              <span class="text-sm font-bold">Total Fixed &amp; Debts</span>
+              <span id="fixed-expenses-total" class="text-base font-extrabold text-rose-400 mono-num">₱1,191.58</span>
             </div>
           </div>
 
           <!-- PANEL 2 (1/3): WEEKLY VARIABLE ALLOCATION -->
           <div class="app-card rounded-2xl p-5 flex flex-col justify-between">
             <div>
-              <div class="flex items-center gap-2.5 mb-3.5">
-                <div class="w-8 h-8 rounded-lg bg-emerald-500/15 text-emerald-400 flex items-center justify-center shrink-0">
-                  <i data-lucide="pie-chart" class="w-4 h-4"></i>
-                </div>
-                <div>
-                  <h3 class="text-sm font-bold">Weekly Variable Allocation</h3>
-                  <p class="text-[11px]" style="color: var(--text-secondary)">Priority #3 split after debts &amp; fixed bills</p>
+              <div class="flex items-center justify-between gap-2 mb-3.5">
+                <div class="flex items-center gap-2.5">
+                  <div class="w-8 h-8 rounded-lg bg-emerald-500/15 text-emerald-400 flex items-center justify-center shrink-0">
+                    <i data-lucide="pie-chart" class="w-4 h-4"></i>
+                  </div>
+                  <div>
+                    <h3 class="text-sm font-bold">Weekly Variable Allocation</h3>
+                    <p class="text-[11px]" style="color: var(--text-secondary)">Remaining base pool after debts &amp; bills</p>
+                  </div>
                 </div>
               </div>
 
-              <!-- Available Pool Callout -->
-              <div class="p-3 rounded-xl app-subcard flex items-center justify-between mb-4">
-                <span class="text-xs font-medium" style="color: var(--text-secondary)">Available to Allocate</span>
-                <span id="var-remaining-base" class="text-sm font-extrabold text-emerald-400 mono-num">₱108.42</span>
-              </div>
-
-              <!-- Variable Breakdown List -->
-              <div id="variable-allocation-list" class="space-y-3">
+              <div id="variable-allocation-list" class="space-y-2.5">
                 <!-- Rendered via JS -->
               </div>
+            </div>
+
+            <div class="mt-4 pt-3.5 border-t app-divider flex items-center justify-between">
+              <span class="text-sm font-bold">Remaining Base Pool</span>
+              <span id="var-remaining-base" class="text-base font-extrabold text-emerald-400 mono-num">₱108.42</span>
             </div>
           </div>
 
           <!-- PANEL 3 (1/3): EXTRA INCOME ALLOCATION -->
           <div class="app-card rounded-2xl p-5 flex flex-col justify-between">
             <div>
-              <div class="flex items-center gap-2.5 mb-3.5">
-                <div class="w-8 h-8 rounded-lg bg-blue-500/15 text-blue-400 flex items-center justify-center shrink-0">
-                  <i data-lucide="banknote" class="w-4 h-4"></i>
-                </div>
-                <div>
-                  <h3 class="text-sm font-bold">Extra Income Allocation</h3>
-                  <p class="text-[11px]" style="color: var(--text-secondary)">Bonus earnings split across wallets</p>
+              <div class="flex items-center justify-between gap-2 mb-3.5">
+                <div class="flex items-center gap-2.5">
+                  <div class="w-8 h-8 rounded-lg bg-purple-500/15 text-purple-400 flex items-center justify-center shrink-0">
+                    <i data-lucide="sparkles" class="w-4 h-4"></i>
+                  </div>
+                  <div>
+                    <h3 class="text-sm font-bold">Extra Income Allocation</h3>
+                    <p class="text-[11px]" style="color: var(--text-secondary)">Bonus / side income split by variable %</p>
+                  </div>
                 </div>
               </div>
 
@@ -797,27 +801,161 @@
                   Extra Income Amount
                 </label>
                 <div class="relative">
-                  <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-500">₱</span>
-                  <input id="extra-income-input" type="text" value=""
+                  <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm font-bold text-emerald-400">₱</span>
+                  <input id="extra-income-input" type="text" value="" placeholder="0.00"
                     oninput="handleExtraIncomeInput()"
                     onblur="finalizeExtraIncomeInput()"
                     onkeydown="if(event.key==='Enter'){this.blur();}"
-                    placeholder="Enter extra earnings (e.g. 500+300)"
-                    class="w-full pl-8 pr-4 py-2.5 rounded-xl app-input text-xs font-semibold mono-num" />
+                    class="w-full pl-8 pr-4 py-2 rounded-xl app-input text-right text-sm font-extrabold text-emerald-400 mono-num" />
                 </div>
               </div>
 
-              <div class="pt-3 border-t app-divider">
-                <div class="text-[10px] font-bold uppercase tracking-wider mb-2.5" style="color: var(--text-secondary)">
-                  Extra Breakdown &amp; Wallets
+              <div id="extra-allocation-list" class="space-y-2.5">
+                <!-- Rendered via JS -->
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ==================== PAGE 3: SAVED (2-COL CURRENT WEEK HIGH-TO-LOW | UPCOMING WEEKS) ==================== -->
+      <section id="page-saved" class="hidden p-5 sm:p-6 max-w-7xl mx-auto">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+
+          <!-- LEFT PANEL (7 cols): CURRENT WEEK (2-COLUMN BANK CARDS, HIGH TO LOW, ZERO-ALLOCATION COLLAPSED AT BOTTOM) -->
+          <div class="lg:col-span-7 app-card rounded-2xl p-5 space-y-4">
+            <div class="flex flex-wrap items-center justify-between gap-3 pb-3.5 border-b app-divider">
+              <div class="flex items-center gap-2.5 min-w-0">
+                <div class="w-8 h-8 rounded-lg bg-blue-500/15 text-blue-400 flex items-center justify-center shrink-0">
+                  <i data-lucide="landmark" class="w-4 h-4"></i>
                 </div>
-                <div id="extra-allocation-list" class="space-y-2.5">
-                  <!-- Rendered via JS -->
+                <div class="min-w-0">
+                  <div class="flex items-center gap-2">
+                    <h3 class="text-sm font-bold">Current Week</h3>
+                    <span id="saved-current-week-badge" class="px-2 py-0.5 rounded-md bg-blue-500/15 border border-blue-500/30 text-blue-400 text-[11px] font-bold truncate">
+                      Week 48
+                    </span>
+                  </div>
+                  <p id="saved-current-week-range" class="text-[11px] mt-0.5" style="color: var(--text-secondary)">
+                    Nov 23 – Nov 29, 2026
+                  </p>
+                </div>
+              </div>
+
+              <div class="flex items-center gap-2 shrink-0">
+                <button type="button" onclick="toggleCurrentWeekBankCards()" id="toggle-current-banks-btn"
+                  class="px-2.5 py-1.5 rounded-lg app-subcard hover:border-blue-500/40 text-[11px] font-semibold transition">
+                  Expand All
+                </button>
+                <div class="px-3 py-1.5 rounded-xl app-subcard flex items-center gap-1.5 text-xs">
+                  <span class="font-bold uppercase text-[10px]" style="color: var(--text-secondary)">TOTAL:</span>
+                  <span id="saved-current-grand-total" class="text-sm font-extrabold text-emerald-400 mono-num">₱0.00</span>
+                </div>
+              </div>
+            </div>
+
+            <p class="text-[11px]" style="color: var(--text-secondary)">
+              Sorted highest to lowest &bull; Check off each bank once transferred, or click to view items.
+            </p>
+
+            <!-- Current Week Bank Cards (2-Column Grid) -->
+            <div id="saved-current-bank-cards" class="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <!-- Rendered via JS -->
+            </div>
+
+            <!-- Zero-Allocation Banks Collapsed Dropdown (Bottom of Same Panel) -->
+            <div id="saved-current-zero-banks-wrapper" class="hidden pt-2 border-t app-divider">
+              <div class="app-subcard rounded-xl overflow-hidden">
+                <button type="button" onclick="toggleCurrentZeroBanksAccordion()"
+                  class="w-full px-3.5 py-2.5 flex items-center justify-between text-xs font-semibold hover:bg-slate-500/5 transition cursor-pointer">
+                  <div class="flex items-center gap-2">
+                    <i data-lucide="eye-off" class="w-3.5 h-3.5 text-slate-400"></i>
+                    <span style="color: var(--text-secondary)">Unassigned / ₱0.00 Banks</span>
+                    <span id="saved-current-zero-count" class="px-2 py-0.5 rounded-full app-card text-[10px] font-bold">0</span>
+                  </div>
+                  <i id="saved-current-zero-chev" data-lucide="chevron-down" class="w-4 h-4 text-slate-400 transition-transform duration-200"></i>
+                </button>
+                <div id="saved-current-zero-body" class="accordion-content">
+                  <div class="accordion-inner">
+                    <div id="saved-current-zero-list" class="px-3.5 pb-3 pt-2 border-t app-divider flex flex-wrap gap-2">
+                      <!-- Rendered via JS -->
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
 
+          <!-- RIGHT PANEL (5 cols): UPCOMING WEEKS (COLLAPSED DROPDOWNS BY DEFAULT) -->
+          <div class="lg:col-span-5 app-card rounded-2xl p-5 space-y-4">
+            <div class="flex flex-wrap items-center justify-between gap-3 pb-3.5 border-b app-divider">
+              <div class="flex items-center gap-2.5">
+                <div class="w-8 h-8 rounded-lg bg-emerald-500/15 text-emerald-400 flex items-center justify-center shrink-0">
+                  <i data-lucide="calendar-clock" class="w-4 h-4"></i>
+                </div>
+                <div>
+                  <div class="flex items-center gap-2">
+                    <h3 class="text-sm font-bold">Upcoming Weeks</h3>
+                    <span id="saved-upcoming-count" class="px-2 py-0.5 rounded-full app-subcard text-[11px] font-bold">
+                      0
+                    </span>
+                  </div>
+                  <p class="text-[11px] mt-0.5" style="color: var(--text-secondary)">
+                    Click any upcoming week dropdown to inspect or load
+                  </p>
+                </div>
+              </div>
+
+              <div class="flex items-center gap-2">
+                <button type="button" onclick="toggleAllUpcomingWeeks()" id="toggle-upcoming-weeks-btn"
+                  class="px-2.5 py-1.5 rounded-lg app-subcard hover:border-blue-500/40 text-[11px] font-semibold transition">
+                  Expand All
+                </button>
+              </div>
+            </div>
+
+            <!-- Upcoming Weeks Collapsed Dropdown List -->
+            <div id="saved-upcoming-weeks-list" class="space-y-3">
+              <!-- Rendered via JS -->
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ==================== PAGE 4: PREVIOUS OLD WEEKS (FINISHED WEEKS ARCHIVE) ==================== -->
+      <section id="page-old-weeks" class="hidden p-5 sm:p-6 max-w-7xl mx-auto space-y-5">
+        <div class="app-card rounded-2xl p-5 flex flex-wrap items-center justify-between gap-4">
+          <div class="flex items-center gap-3">
+            <div class="w-9 h-9 rounded-xl bg-slate-500/15 text-slate-300 border border-slate-500/30 flex items-center justify-center shrink-0">
+              <i data-lucide="archive" class="w-4 h-4"></i>
+            </div>
+            <div>
+              <div class="flex items-center gap-2">
+                <h3 class="text-sm font-bold">Previous Old Weeks</h3>
+                <span id="old-weeks-total-count" class="px-2.5 py-0.5 rounded-full app-subcard text-[11px] font-bold">0</span>
+              </div>
+              <p class="text-xs mt-0.5" style="color: var(--text-secondary)">
+                Completed budget weeks automatically move here once their week ends
+              </p>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-3">
+            <div class="px-3.5 py-1.5 rounded-xl app-subcard text-xs flex items-center gap-2">
+              <span style="color: var(--text-secondary)">Archived Total:</span>
+              <strong id="old-weeks-grand-total" class="text-emerald-400 mono-num">₱0.00</strong>
+            </div>
+            <button type="button" onclick="toggleAllOldWeeks()" id="toggle-old-weeks-btn"
+              class="px-3 py-1.5 rounded-xl app-subcard hover:border-blue-500/40 text-xs font-semibold transition">
+              Expand All
+            </button>
+          </div>
+        </div>
+
+        <div id="old-weeks-list" class="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
+          <!-- Rendered via JS -->
         </div>
       </section>
 
@@ -973,102 +1111,6 @@
                 <span id="sloan-staged-count" class="px-2 py-0.5 rounded-full app-subcard text-[10px] font-bold">0</span>
               </div>
               <div id="debts-sloan-staged-list" class="space-y-2">
-                <!-- Rendered via JS -->
-              </div>
-            </div>
-          </div>
-
-        </div>
-      </section>
-
-      <!-- ==================== PAGE 3: SAVED (1/2 CURRENT WEEK | 1/2 UPCOMING WEEKS COLLAPSED DROPDOWNS) ==================== -->
-      <section id="page-saved" class="hidden p-5 sm:p-6 max-w-7xl mx-auto">
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
-
-          <!-- LEFT PANEL (1/2): CURRENT WEEK -->
-          <div class="app-card rounded-2xl p-5 space-y-4">
-            <div class="flex flex-wrap items-center justify-between gap-3 pb-3.5 border-b app-divider">
-              <div class="flex items-center gap-2.5 min-w-0">
-                <div class="w-8 h-8 rounded-lg bg-blue-500/15 text-blue-400 flex items-center justify-center shrink-0">
-                  <i data-lucide="landmark" class="w-4 h-4"></i>
-                </div>
-                <div class="min-w-0">
-                  <div class="flex items-center gap-2">
-                    <h3 class="text-sm font-bold">Current Week</h3>
-                    <span id="saved-current-week-badge" class="px-2 py-0.5 rounded-md bg-blue-500/15 border border-blue-500/30 text-blue-400 text-[11px] font-bold truncate">
-                      Week 48
-                    </span>
-                  </div>
-                  <p id="saved-current-week-range" class="text-[11px] mt-0.5" style="color: var(--text-secondary)">
-                    Nov 23 – Nov 29, 2026
-                  </p>
-                </div>
-              </div>
-
-              <div class="flex items-center gap-2 shrink-0">
-                <button type="button" onclick="toggleCurrentWeekBankCards()" id="toggle-current-banks-btn"
-                  class="px-2.5 py-1.5 rounded-lg app-subcard hover:border-blue-500/40 text-[11px] font-semibold transition">
-                  Expand All
-                </button>
-                <div class="px-3 py-1.5 rounded-xl app-subcard flex items-center gap-1.5 text-xs">
-                  <span class="font-bold uppercase text-[10px]" style="color: var(--text-secondary)">TOTAL:</span>
-                  <span id="saved-current-grand-total" class="text-sm font-extrabold text-emerald-400 mono-num">₱0.00</span>
-                </div>
-              </div>
-            </div>
-
-            <p class="text-[11px]" style="color: var(--text-secondary)">
-              Check off each bank on the left once transferred, or click a bank card to view its itemized breakdown.
-            </p>
-
-            <!-- Current Week Bank Cards -->
-            <div id="saved-current-bank-cards" class="space-y-3">
-              <!-- Rendered via JS -->
-            </div>
-          </div>
-
-          <!-- RIGHT PANEL (1/2): UPCOMING WEEKS (COLLAPSED DROPDOWNS BY DEFAULT) -->
-          <div class="app-card rounded-2xl p-5 space-y-4">
-            <div class="flex flex-wrap items-center justify-between gap-3 pb-3.5 border-b app-divider">
-              <div class="flex items-center gap-2.5">
-                <div class="w-8 h-8 rounded-lg bg-emerald-500/15 text-emerald-400 flex items-center justify-center shrink-0">
-                  <i data-lucide="calendar-clock" class="w-4 h-4"></i>
-                </div>
-                <div>
-                  <div class="flex items-center gap-2">
-                    <h3 class="text-sm font-bold">Upcoming Weeks</h3>
-                    <span id="saved-upcoming-count" class="px-2 py-0.5 rounded-full app-subcard text-[11px] font-bold">
-                      0
-                    </span>
-                  </div>
-                  <p class="text-[11px] mt-0.5" style="color: var(--text-secondary)">
-                    Click any upcoming week dropdown to inspect or load
-                  </p>
-                </div>
-              </div>
-
-              <div class="flex items-center gap-2">
-                <button type="button" onclick="toggleAllUpcomingWeeks()" id="toggle-upcoming-weeks-btn"
-                  class="px-2.5 py-1.5 rounded-lg app-subcard hover:border-blue-500/40 text-[11px] font-semibold transition">
-                  Expand All
-                </button>
-              </div>
-            </div>
-
-            <!-- Upcoming Weeks Collapsed Dropdown List -->
-            <div id="saved-upcoming-weeks-list" class="space-y-3">
-              <!-- Rendered via JS -->
-            </div>
-
-            <!-- Earlier Saved Weeks (Collapsed Dropdowns) -->
-            <div id="saved-past-weeks-wrapper" class="hidden pt-3 border-t app-divider space-y-2.5">
-              <div class="flex items-center justify-between">
-                <span class="text-[10px] font-bold uppercase tracking-wider" style="color: var(--text-muted)">
-                  Earlier Saved Weeks
-                </span>
-                <span id="saved-past-count" class="px-2 py-0.5 rounded-full app-subcard text-[10px] font-bold">0</span>
-              </div>
-              <div id="saved-past-weeks-list" class="space-y-2.5">
                 <!-- Rendered via JS -->
               </div>
             </div>
@@ -1352,6 +1394,7 @@ service cloud.firestore {
     let firestorePermissionDenied = false;
     let currentWeekBanksExpanded = false;
     let allUpcomingWeeksExpanded = false;
+    let allOldWeeksExpanded = false;
     let isRestoringWeekState = false;
     let hasCompletedInitialLoad = false;
     let cloudSaveDebounceTimer = null;
@@ -2091,7 +2134,7 @@ service cloud.firestore {
     }
 
     function navigateTo(page) {
-      ['allocation', 'debts', 'saved', 'setup'].forEach(p => {
+      ['allocation', 'debts', 'saved', 'old-weeks', 'setup'].forEach(p => {
         const sectionEl = document.getElementById(`page-${p}`);
         if (sectionEl) sectionEl.classList.add('hidden');
 
@@ -2109,7 +2152,8 @@ service cloud.firestore {
       const titles = {
         allocation: ['Weekly Budget Allocation', 'Budget Allocation for Vhon • Debt-first priority weekly planner'],
         debts: ['Debts', 'Priority #1 settlement • SPaylater & SLoan sorted by due date'],
-        saved: ['Saved Allocations', 'Total allocation per bank • Check off transfers as you send them'],
+        saved: ['Saved Allocations', 'Current & upcoming week allocations • High to low per bank'],
+        'old-weeks': ['Previous Old Weeks', 'Completed budget weeks archive • Automatically moved once week ends'],
         setup: ['Setup Expenses & Banks', 'Customize fixed bills, variable percentages, assigned banks & activity log']
       };
       if (titles[page]) {
@@ -2119,6 +2163,7 @@ service cloud.firestore {
 
       if (page === 'debts') renderDebtsPage();
       if (page === 'saved') renderSavedPage();
+      if (page === 'old-weeks') renderOldWeeksPage();
       if (page === 'setup') {
         renderSetupPage();
         renderActivityLog();
@@ -2126,7 +2171,16 @@ service cloud.firestore {
       if (window.lucide) lucide.createIcons();
     }
 
-    // ==================== CALENDAR LOGIC (SINGLE CLICK = PAYDAY -> NEXT WEEK BUDGET) ====================
+    // ==================== CALENDAR LOGIC (CLICK = PAYDAY -> NEXT WEEK | DRAG = CUSTOM TARGET WEEK) ====================
+    function getTodayISO() {
+      return toISODate(new Date());
+    }
+
+    function isWeekFinished(snap) {
+      if (!snap || !snap.targetEndDate) return false;
+      return snap.targetEndDate < getTodayISO();
+    }
+
     function toISODate(d) {
       const y = d.getFullYear();
       const m = String(d.getMonth() + 1).padStart(2, '0');
@@ -2218,27 +2272,37 @@ service cloud.firestore {
       const d2 = parseISODate(endStr);
       const [s, e] = d1 <= d2 ? [d1, d2] : [d2, d1];
 
-      const mon = getMondayOfWeek(s);
-      const nextMon = new Date(mon);
-      nextMon.setDate(mon.getDate() + 7);
-      const nextSun = new Date(nextMon);
-      nextSun.setDate(nextMon.getDate() + 6);
+      // Dragging directly sets the Custom Target Budget Week / Range
+      appState.targetStartDate = toISODate(s);
+      appState.targetEndDate = toISODate(e);
 
-      appState.selectedDate = toISODate(e);
-      appState.incomeStartDate = toISODate(s);
-      appState.incomeEndDate = toISODate(e);
-      appState.targetStartDate = toISODate(nextMon);
-      appState.targetEndDate = toISODate(nextSun);
-
-      loadWeekAllocationIfSaved(appState.targetStartDate, appState.targetEndDate, true);
+      const wasAlreadySaved = loadWeekAllocationIfSaved(appState.targetStartDate, appState.targetEndDate, true);
       syncLockedDebtsToAllocation(true);
       refreshAllUI(true);
-      recordAccountActivity('Calendar', `Selected sahod range ${formatFullRange(appState.incomeStartDate, appState.incomeEndDate)}`, true);
+      if (!wasAlreadySaved) {
+        autoSaveCurrentWeek(true);
+      }
+      recordAccountActivity('Calendar', `Dragged custom target budget week: ${formatFullRange(appState.targetStartDate, appState.targetEndDate)}`, true);
+    }
+
+    function jumpToTodayMonth() {
+      const now = new Date();
+      appState.calYear = now.getFullYear();
+      appState.calMonth = now.getMonth();
+      renderCalendar();
+      showToast(`Showing today: ${now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`);
     }
 
     function updateCalendarLabels() {
+      const todayISO = getTodayISO();
+      const todayFormatted = parseISODate(todayISO).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
       const incTxt = formatFullRange(appState.incomeStartDate, appState.incomeEndDate);
       const tgtTxt = formatFullRange(appState.targetStartDate, appState.targetEndDate);
+
+      const todayBtnTxt = document.getElementById('cal-today-btn-text');
+      const miniTodayLbl = document.getElementById('mini-cal-today-label');
+      if (todayBtnTxt) todayBtnTxt.textContent = `Today (${formatShortDate(todayISO)})`;
+      if (miniTodayLbl) miniTodayLbl.textContent = todayFormatted;
 
       const selPill = document.getElementById('cal-selected-date-pill');
       const incRangeEl = document.getElementById('cal-income-range-text');
@@ -2296,9 +2360,10 @@ service cloud.firestore {
       const startOffset = firstDayWeekday === 0 ? 6 : firstDayWeekday - 1;
       const daysInMonth = new Date(appState.calYear, appState.calMonth + 1, 0).getDate();
 
+      const todayISO = getTodayISO();
       const hlStart = appState.incomeStartDate;
       const hlEnd = appState.incomeEndDate;
-      const cellHeight = compact ? 'h-7 text-[11px] rounded-lg' : 'h-9 text-xs rounded-xl';
+      const cellHeight = compact ? 'h-7 text-[11px] rounded-lg' : 'h-10 text-xs rounded-xl';
 
       let html = '';
       for (let i = 0; i < startOffset; i++) {
@@ -2308,6 +2373,7 @@ service cloud.firestore {
       for (let day = 1; day <= daysInMonth; day++) {
         const curDate = new Date(appState.calYear, appState.calMonth, day);
         const iso = toISODate(curDate);
+        const isToday = iso === todayISO;
         const isSelectedSingle = iso === appState.selectedDate;
         const isInIncomeRange = iso >= hlStart && iso <= hlEnd;
         const isInTargetRange = iso >= appState.targetStartDate && iso <= appState.targetEndDate;
@@ -2315,30 +2381,41 @@ service cloud.firestore {
         let classes = `cal-day-cell ${cellHeight} flex flex-col items-center justify-center font-semibold cursor-pointer relative border transition `;
         if (isSelectedSingle) {
           classes += 'bg-blue-600 text-white border-blue-500 shadow-sm ';
+        } else if (isInTargetRange) {
+          classes += 'bg-emerald-500/18 text-emerald-400 border-emerald-500/45 ';
         } else if (isInIncomeRange) {
           classes += 'bg-blue-500/20 text-blue-400 border-blue-500/40 ';
-        } else if (isInTargetRange) {
-          classes += 'bg-emerald-500/15 text-emerald-400 border-emerald-500/35 ';
+        } else if (isToday) {
+          classes += 'bg-amber-500/20 text-amber-300 border-amber-400/70 ';
         } else {
           classes += 'hover:bg-slate-500/10 border-transparent ';
         }
 
-        let dotHtml = '';
-        if (!compact) {
-          if (isInIncomeRange && !isSelectedSingle) {
-            dotHtml = `<span class="pointer-events-none w-1 h-1 rounded-full bg-blue-400 mt-0.5"></span>`;
-          } else if (isInTargetRange) {
-            dotHtml = `<span class="pointer-events-none w-1 h-1 rounded-full bg-emerald-400 mt-0.5"></span>`;
+        if (isToday) {
+          classes += 'ring-2 ring-amber-400 font-extrabold ';
+        }
+
+        let badgeHtml = '';
+        if (isToday) {
+          badgeHtml = compact
+            ? `<span class="pointer-events-none w-1.5 h-1.5 rounded-full bg-amber-400 mt-0.5"></span>`
+            : `<span class="pointer-events-none text-[8px] font-extrabold uppercase tracking-tighter leading-none text-amber-300 mt-0.5">Today</span>`;
+        } else if (!compact) {
+          if (isInTargetRange) {
+            badgeHtml = `<span class="pointer-events-none w-1 h-1 rounded-full bg-emerald-400 mt-0.5"></span>`;
+          } else if (isInIncomeRange && !isSelectedSingle) {
+            badgeHtml = `<span class="pointer-events-none w-1 h-1 rounded-full bg-blue-400 mt-0.5"></span>`;
           }
         }
 
         html += `
           <div data-date="${iso}"
+               title="${isToday ? 'Today (' + iso + ')' : iso}"
                onpointerdown="onCalPointerDown('${iso}', event)"
                onpointerenter="onCalPointerEnter('${iso}')"
                class="${classes}">
-            <span class="pointer-events-none">${day}</span>
-            ${dotHtml}
+            <span class="pointer-events-none leading-none">${day}</span>
+            ${badgeHtml}
           </div>
         `;
       }
@@ -2364,7 +2441,7 @@ service cloud.firestore {
     function updateCalDragPreviewInPlace() {
       const cells = document.querySelectorAll('.cal-day-cell');
       if (!pointerDownDate || !dragCurrentStr || !didDragRange) {
-        cells.forEach(el => el.classList.remove('ring-2', 'ring-blue-400'));
+        cells.forEach(el => el.classList.remove('ring-2', 'ring-emerald-400', 'bg-emerald-500/25'));
         return;
       }
       const lo = pointerDownDate <= dragCurrentStr ? pointerDownDate : dragCurrentStr;
@@ -2372,9 +2449,9 @@ service cloud.firestore {
       cells.forEach(el => {
         const d = el.getAttribute('data-date');
         if (d >= lo && d <= hi) {
-          el.classList.add('ring-2', 'ring-blue-400');
+          el.classList.add('ring-2', 'ring-emerald-400', 'bg-emerald-500/25');
         } else {
-          el.classList.remove('ring-2', 'ring-blue-400');
+          el.classList.remove('ring-2', 'ring-emerald-400', 'bg-emerald-500/25');
         }
       });
     }
@@ -2412,7 +2489,7 @@ service cloud.firestore {
 
       if (wasDrag) {
         applyDraggedRange(startIso, endIso);
-        showToast(`Mapped sahod range to ${formatFullRange(appState.targetStartDate, appState.targetEndDate)}`);
+        showToast(`Custom target week set: ${formatFullRange(appState.targetStartDate, appState.targetEndDate)}`);
       } else {
         selectPaydayDate(startIso);
         showToast(`Payday ${formatShortDate(startIso)} → budgeting ${formatFullRange(appState.targetStartDate, appState.targetEndDate)}`);
@@ -2506,14 +2583,17 @@ service cloud.firestore {
       if (!bar) return;
 
       const activeId = `${appState.targetStartDate}_${appState.targetEndDate}`;
-      const list = Array.isArray(appState.savedAllocations) ? appState.savedAllocations : [];
+      // Hide finished/past weeks once their week has ended
+      const activeAndUpcomingList = (Array.isArray(appState.savedAllocations) ? appState.savedAllocations : [])
+        .filter(snap => !isWeekFinished(snap))
+        .sort((a, b) => (a.targetStartDate || '').localeCompare(b.targetStartDate || ''));
 
-      if (list.length === 0) {
-        bar.innerHTML = `<span class="text-[11px] opacity-60">Current week auto-saves as you edit.</span>`;
+      if (activeAndUpcomingList.length === 0) {
+        bar.innerHTML = `<span class="text-[11px] opacity-60">Current & upcoming weeks auto-save here.</span>`;
         return;
       }
 
-      bar.innerHTML = list.slice(0, 6).map(snap => {
+      bar.innerHTML = activeAndUpcomingList.slice(0, 6).map(snap => {
         const isCurrent = snap.id === activeId;
         return `
           <button type="button" onclick="selectSavedWeekFromBar('${snap.id}')"
@@ -2555,7 +2635,7 @@ service cloud.firestore {
       recordAccountActivity('Allocation', `Updated Extra Income to ${formatPHP(appState.extraIncomeValue)}`);
     }
 
-    // ==================== FIXED WEEKLY EXPENSES & DEBT ROW LOCKS ====================
+    // ==================== FIXED WEEKLY EXPENSES & ALWAYS-LOCKED DEBT ROWS ====================
     function renderFixedExpensesList() {
       const container = document.getElementById('fixed-expenses-list');
       if (!container) return;
@@ -2575,15 +2655,15 @@ service cloud.firestore {
             <span class="px-2 py-0.5 rounded-md text-[10px] font-semibold ${getBankPillClass(item.bank)}">
               ${item.bank}
             </span>
-            <button type="button" onclick="toggleFixedItemLock('${item.id}')" title="${item.locked ? 'Unlock amount' : 'Lock amount'}"
-              class="p-1.5 rounded-lg app-subcard ${item.locked ? 'text-amber-400 border-amber-500/40' : 'text-slate-400 hover:text-amber-400'} transition">
-              <i data-lucide="${item.locked ? 'lock' : 'unlock'}" class="w-3.5 h-3.5"></i>
-            </button>
+            <span title="Locked — edit amount in Setup"
+              class="p-1.5 rounded-lg app-subcard text-amber-400 border border-amber-500/30 flex items-center justify-center">
+              <i data-lucide="lock" class="w-3.5 h-3.5"></i>
+            </span>
             <div class="relative w-20">
               <span class="absolute left-2 top-1/2 -translate-y-1/2 text-[11px] text-slate-500">₱</span>
-              <input type="text" value="${Number(item.weeklyAmount).toFixed(2)}" ${item.locked ? 'disabled' : ''}
-                onchange="updateFixedItemAmount('${item.id}', this.value)"
-                class="w-full pl-5 pr-1.5 py-1 rounded-lg app-input text-right text-xs font-bold mono-num disabled:opacity-60 disabled:cursor-not-allowed" />
+              <input type="text" value="${Number(item.weeklyAmount).toFixed(2)}" disabled readonly
+                title="Locked — edit in Setup page"
+                class="w-full pl-5 pr-1.5 py-1 rounded-lg app-input text-right text-xs font-bold mono-num opacity-75 cursor-not-allowed" />
             </div>
           </div>
         </div>
@@ -2597,71 +2677,25 @@ service cloud.firestore {
         renderFixedExpensesList();
         recalculateBudget();
         autoSaveCurrentWeek(true);
-        recordAccountActivity('Allocation', `${item.enabled ? 'Enabled' : 'Disabled'} fixed expense: ${item.name}`);
-        if (window.lucide) lucide.createIcons();
-      }
-    }
-
-    function toggleFixedItemLock(id) {
-      const item = appState.fixedItems.find(x => x.id === id);
-      if (item) {
-        item.locked = !item.locked;
-        renderFixedExpensesList();
-        persistUserData(true);
+        syncLockedExpensesAcrossAllWeeks();
+        renderSavedPage();
+        renderSetupPage();
+        recordAccountActivity('Allocation', `${item.enabled ? 'Enabled' : 'Disabled'} fixed expense: ${item.name}`, true);
         if (window.lucide) lucide.createIcons();
       }
     }
 
     function updateDebtRowLockUI() {
+      // Debts are always locked on Allocation and strictly synced with the Debts page
+      appState.spaylaterLocked = true;
+      appState.sloanLocked = true;
       const spayInput = document.getElementById('fixed-spaylater');
-      const spayBtn = document.getElementById('lock-btn-spaylater');
-      const spayIcon = document.getElementById('lock-icon-spaylater');
-      if (spayInput) spayInput.disabled = !!appState.spaylaterLocked;
-      if (spayBtn) {
-        spayBtn.className = appState.spaylaterLocked
-          ? 'p-1.5 rounded-lg app-subcard text-amber-400 border-amber-500/40 transition'
-          : 'p-1.5 rounded-lg app-subcard text-slate-400 hover:text-amber-400 transition';
-      }
-      if (spayIcon) spayIcon.setAttribute('data-lucide', appState.spaylaterLocked ? 'lock' : 'unlock');
-
       const sloanInput = document.getElementById('fixed-sloan');
-      const sloanBtn = document.getElementById('lock-btn-sloan');
-      const sloanIcon = document.getElementById('lock-icon-sloan');
-      if (sloanInput) sloanInput.disabled = !!appState.sloanLocked;
-      if (sloanBtn) {
-        sloanBtn.className = appState.sloanLocked
-          ? 'p-1.5 rounded-lg app-subcard text-amber-400 border-amber-500/40 transition'
-          : 'p-1.5 rounded-lg app-subcard text-slate-400 hover:text-amber-400 transition';
-      }
-      if (sloanIcon) sloanIcon.setAttribute('data-lucide', appState.sloanLocked ? 'lock' : 'unlock');
+      if (spayInput) spayInput.disabled = true;
+      if (sloanInput) sloanInput.disabled = true;
     }
 
-    function toggleDebtRowLock(provider) {
-      if (provider === 'spaylater') {
-        appState.spaylaterLocked = !appState.spaylaterLocked;
-      } else {
-        appState.sloanLocked = !appState.sloanLocked;
-      }
-      updateDebtRowLockUI();
-      persistUserData(true);
-      if (window.lucide) lucide.createIcons();
-    }
-
-    function handleDebtInputOverride(provider, valStr) {
-      if (provider === 'spaylater' && appState.spaylaterLocked) return;
-      if (provider === 'sloan' && appState.sloanLocked) return;
-
-      const num = evaluateMathExpr(valStr);
-      if (provider === 'spaylater') {
-        appState.spaylaterWeekly = num;
-      } else {
-        appState.sloanWeekly = num;
-      }
-      recalculateBudget();
-      autoSaveCurrentWeek(true);
-    }
-
-    function syncLockedDebtsToAllocation(forceOverwrite = false) {
+    function syncLockedDebtsToAllocation(forceOverwrite = true) {
       let spaySum = 0;
       let spayDesc = [];
       let sloanSum = 0;
@@ -2690,11 +2724,11 @@ service cloud.firestore {
         }
       });
 
-      if (forceOverwrite || !appState.spaylaterLocked) {
-        appState.spaylaterWeekly = Math.round(spaySum * 100) / 100;
-        const spayInput = document.getElementById('fixed-spaylater');
-        if (spayInput) spayInput.value = appState.spaylaterWeekly.toFixed(2);
-      }
+      appState.spaylaterLocked = true;
+      appState.spaylaterWeekly = Math.round(spaySum * 100) / 100;
+      const spayInput = document.getElementById('fixed-spaylater');
+      if (spayInput) spayInput.value = appState.spaylaterWeekly.toFixed(2);
+
       const spayLabel = document.getElementById('spaylater-row-label');
       if (spayLabel) {
         spayLabel.textContent = spayDesc.length > 0
@@ -2702,11 +2736,11 @@ service cloud.firestore {
           : 'SPaylater';
       }
 
-      if (forceOverwrite || !appState.sloanLocked) {
-        appState.sloanWeekly = Math.round(sloanSum * 100) / 100;
-        const sloanInput = document.getElementById('fixed-sloan');
-        if (sloanInput) sloanInput.value = appState.sloanWeekly.toFixed(2);
-      }
+      appState.sloanLocked = true;
+      appState.sloanWeekly = Math.round(sloanSum * 100) / 100;
+      const sloanInput = document.getElementById('fixed-sloan');
+      if (sloanInput) sloanInput.value = appState.sloanWeekly.toFixed(2);
+
       const sloanLabel = document.getElementById('sloan-row-label');
       if (sloanLabel) {
         sloanLabel.textContent = sloanDesc.length > 0
@@ -2930,21 +2964,60 @@ service cloud.firestore {
         appState.baseIncomeExpr = String(appState.baseIncomeValue);
         appState.extraIncomeValue = Number(snap.extraIncome) || 0;
         appState.extraIncomeExpr = appState.extraIncomeValue > 0 ? String(appState.extraIncomeValue) : '';
-        if (Array.isArray(snap.fixedItems) && snap.fixedItems.length > 0) {
-          const setupFixed = appState.fixedItems || [];
-          appState.fixedItems = snap.fixedItems.map(item => {
-            const matchedSetup = setupFixed.find(
-              sf => sf.id === item.id || sf.name.toLowerCase() === (item.name || '').toLowerCase()
+
+        const currentMasterFixed = Array.isArray(appState.fixedItems) ? appState.fixedItems : [];
+        const snapFixedList = Array.isArray(snap.fixedItems) ? snap.fixedItems : [];
+
+        if (currentMasterFixed.length > 0) {
+          appState.fixedItems = currentMasterFixed.map(masterItem => {
+            const matchedSnap = snapFixedList.find(
+              sf => sf.id === masterItem.id || (sf.name || '').trim().toLowerCase() === (masterItem.name || '').trim().toLowerCase()
             );
-            return matchedSetup
-              ? { ...item, name: matchedSetup.name, bank: matchedSetup.bank, cycleLabel: matchedSetup.cycleLabel }
-              : { ...item };
+            // If locked in master or snapshot, keep locked status & locked amount synced across weeks
+            if (masterItem.locked || (matchedSnap && matchedSnap.locked)) {
+              const source = masterItem.locked ? masterItem : matchedSnap;
+              return {
+                ...masterItem,
+                weeklyAmount: Number(source.weeklyAmount) || 0,
+                enabled: source.enabled !== false,
+                locked: true
+              };
+            }
+            if (matchedSnap) {
+              return {
+                ...matchedSnap,
+                id: masterItem.id,
+                name: masterItem.name,
+                bank: masterItem.bank,
+                cycleLabel: masterItem.cycleLabel,
+                locked: false
+              };
+            }
+            return { ...masterItem };
           });
+        } else if (snapFixedList.length > 0) {
+          appState.fixedItems = snapFixedList.map(item => ({ ...item }));
         }
-        appState.spaylaterWeekly = Number(snap.spaylaterWeekly) || 0;
-        appState.sloanWeekly = Number(snap.sloanWeekly) || 0;
-        appState.spaylaterLocked = !!snap.spaylaterLocked;
-        appState.sloanLocked = !!snap.sloanLocked;
+
+        if (appState.spaylaterLocked || snap.spaylaterLocked) {
+          appState.spaylaterWeekly = appState.spaylaterLocked
+            ? Number(appState.spaylaterWeekly) || 0
+            : Number(snap.spaylaterWeekly) || 0;
+          appState.spaylaterLocked = true;
+        } else {
+          appState.spaylaterWeekly = Number(snap.spaylaterWeekly) || 0;
+          appState.spaylaterLocked = false;
+        }
+
+        if (appState.sloanLocked || snap.sloanLocked) {
+          appState.sloanWeekly = appState.sloanLocked
+            ? Number(appState.sloanWeekly) || 0
+            : Number(snap.sloanWeekly) || 0;
+          appState.sloanLocked = true;
+        } else {
+          appState.sloanWeekly = Number(snap.sloanWeekly) || 0;
+          appState.sloanLocked = false;
+        }
       } finally {
         isRestoringWeekState = false;
       }
@@ -3618,7 +3691,7 @@ service cloud.firestore {
     }
 
     function toggleBankCardAccordion(headerEl) {
-      const card = headerEl.closest('.app-subcard, .app-card');
+      const card = headerEl.closest('.rounded-xl');
       if (!card) return;
       const content = card.querySelector('.bank-accordion');
       const chevron = card.querySelector('.bank-chevron');
@@ -3643,7 +3716,8 @@ service cloud.firestore {
     function toggleSavedWeekDropdown(snapId) {
       const body = document.getElementById(`week-drop-body-${snapId}`);
       const chev = document.getElementById(`week-drop-chev-${snapId}`);
-      if (body) body.classList.toggle('open');
+      if (!body) return;
+      body.classList.toggle('open');
       if (chev) chev.classList.toggle('rotate-180');
     }
 
@@ -3651,12 +3725,12 @@ service cloud.firestore {
       allUpcomingWeeksExpanded = !allUpcomingWeeksExpanded;
       const btn = document.getElementById('toggle-upcoming-weeks-btn');
       if (btn) btn.textContent = allUpcomingWeeksExpanded ? 'Collapse All' : 'Expand All';
-      const container = document.getElementById('saved-upcoming-weeks-list');
-      if (!container) return;
-      container.querySelectorAll('.upcoming-week-accordion').forEach(el => {
+      const list = document.getElementById('saved-upcoming-weeks-list');
+      if (!list) return;
+      list.querySelectorAll('.upcoming-week-accordion').forEach(el => {
         el.classList.toggle('open', allUpcomingWeeksExpanded);
       });
-      container.querySelectorAll('.upcoming-week-chevron').forEach(el => {
+      list.querySelectorAll('.upcoming-week-chevron').forEach(el => {
         el.classList.toggle('rotate-180', allUpcomingWeeksExpanded);
       });
     }
@@ -3666,7 +3740,7 @@ service cloud.firestore {
       const key = `${snapId}_${bankName}`;
       appState.transferredChecklist[key] = !appState.transferredChecklist[key];
       renderSavedPage();
-      recordAccountActivity('Saved', `${appState.transferredChecklist[key] ? 'Checked' : 'Unchecked'} ${bankName} transfer (${snapId})`, true);
+      recordAccountActivity('Saved', `${appState.transferredChecklist[key] ? 'Checked' : 'Unchecked'} transfer for ${bankName}`, true);
     }
 
     function loadSavedWeekById(snapId) {
@@ -3678,15 +3752,335 @@ service cloud.firestore {
       showToast(`Loaded ${snap.weekBadge} into Allocation!`);
     }
 
-    // ==================== PAGE 4: SETUP (BANKS, FIXED, VARIABLE % & CROSS-WEEK SYNC) ====================
     function getBankOptionsHTML(selectedBank) {
       const banks = appState.banks || DEFAULT_BANKS;
-      return banks.map(b => `
-        <option value="${b.name}" ${b.name === selectedBank ? 'selected' : ''}>${b.name}</option>
-      `).join('');
+      return banks.map(b => {
+        const isSel = (b.name || '').toLowerCase() === (selectedBank || '').toLowerCase();
+        return `<option value="${b.name}" ${isSel ? 'selected' : ''}>${b.name}</option>`;
+      }).join('');
     }
 
-    function syncSetupChangesAcrossAllWeeks() {
+    function syncLockedExpensesAcrossAllWeeks() {
+      syncSetupChangesAcrossAllWeeks();
+    }
+
+    // ==================== PAGE 3: SAVED & PAGE 4: PREVIOUS OLD WEEKS ====================
+    function buildBankBreakdownForSnapshot(snap) {
+      const configuredBanks = appState.banks || DEFAULT_BANKS;
+      const configuredBankNames = configuredBanks.map(b => b.name);
+      const bankMap = {};
+      configuredBankNames.forEach(b => { bankMap[b] = []; });
+
+      const setupFixedList = appState.fixedItems || [];
+      const setupVarList = appState.variableCategories || [];
+      const latestDebtBank = appState.debtBank || snap.debtBank || 'ShopeePay';
+
+      // 1. Recurring Fixed Items (always resolve bank dynamically from latest Setup)
+      (snap.fixedItems || []).filter(it => it.enabled !== false).forEach(item => {
+        const matchedSetup = setupFixedList.find(
+          sf => sf.id === item.id || sf.name.toLowerCase() === (item.name || '').toLowerCase()
+        );
+        const resolvedBank = (matchedSetup && matchedSetup.bank) || item.bank || configuredBankNames[0] || 'MariBank';
+        const resolvedName = (matchedSetup && matchedSetup.name) || item.name;
+        if (!bankMap[resolvedBank]) bankMap[resolvedBank] = [];
+        bankMap[resolvedBank].push({
+          label: resolvedName,
+          amount: Number(item.weeklyAmount) || 0
+        });
+      });
+
+      // 2. Priority #1 Debts (always resolve to latest Debt Bank from Setup)
+      if (!bankMap[latestDebtBank]) bankMap[latestDebtBank] = [];
+      if (Number(snap.spaylaterWeekly) > 0) {
+        bankMap[latestDebtBank].push({ label: 'SPaylater (Priority #1)', amount: Number(snap.spaylaterWeekly) || 0 });
+      }
+      if (Number(snap.sloanWeekly) > 0) {
+        bankMap[latestDebtBank].push({ label: 'SLoan (Priority #1)', amount: Number(snap.sloanWeekly) || 0 });
+      }
+
+      // 3. Variable Breakdown (always resolve bank dynamically from latest Setup)
+      (snap.variableBreakdown || []).forEach(v => {
+        const matchedCat = setupVarList.find(
+          vc => vc.id === v.id || vc.name.toLowerCase() === (v.name || '').toLowerCase()
+        );
+        const resolvedBank = (matchedCat && matchedCat.bank) || v.bank || configuredBankNames[0] || 'MariBank';
+        const resolvedName = (matchedCat && matchedCat.name) || v.name;
+        if (!bankMap[resolvedBank]) bankMap[resolvedBank] = [];
+
+        if (Number(v.baseAmt) > 0) {
+          bankMap[resolvedBank].push({ label: `${resolvedName} (Base)`, amount: Number(v.baseAmt) || 0 });
+        }
+        if (Number(v.extraAmt) > 0) {
+          bankMap[resolvedBank].push({ label: `${resolvedName} (Extra)`, amount: Number(v.extraAmt) || 0 });
+        }
+      });
+
+      const activeEntries = [];
+      const zeroBanks = [];
+      let grandTotal = 0;
+
+      Object.entries(bankMap).forEach(([bankName, items]) => {
+        const nonZeroItems = items
+          .filter(it => (Number(it.amount) || 0) > 0)
+          .sort((a, b) => (Number(b.amount) || 0) - (Number(a.amount) || 0));
+        const bankTotal = Math.round(nonZeroItems.reduce((s, it) => s + (Number(it.amount) || 0), 0) * 100) / 100;
+
+        if (bankTotal > 0 && nonZeroItems.length > 0) {
+          activeEntries.push({ bankName, items: nonZeroItems, total: bankTotal });
+          grandTotal += bankTotal;
+        } else {
+          zeroBanks.push(bankName);
+        }
+      });
+
+      // Sort banks from highest allocation to lowest allocation
+      activeEntries.sort((a, b) => b.total - a.total);
+
+      return {
+        entries: activeEntries,
+        zeroBanks,
+        grandTotal: Math.round(grandTotal * 100) / 100
+      };
+    }
+
+    function renderBankCardItemHTML(snapId, bankName, items, isCurrentWeek = true) {
+      const bankTotal = items.reduce((s, it) => s + (Number(it.amount) || 0), 0);
+      const checkKey = `${snapId}_${bankName}`;
+      const isChecked = !!(appState.transferredChecklist && appState.transferredChecklist[checkKey]);
+      const safeBankArg = bankName.replace(/'/g, "\\'");
+      const expandedClass = isCurrentWeek && currentWeekBanksExpanded ? 'open' : '';
+      const chevronRotate = isCurrentWeek && currentWeekBanksExpanded ? 'rotate-180' : '';
+
+      return `
+        <div class="${isCurrentWeek ? 'app-subcard' : 'app-card'} rounded-xl overflow-hidden border transition ${isChecked ? 'border-emerald-500/40 opacity-75' : 'border-transparent hover:border-blue-500/35'}">
+          <div onclick="toggleBankCardAccordion(this)" class="p-3 flex items-center justify-between gap-2.5 cursor-pointer">
+            <div class="flex items-center gap-2.5 min-w-0">
+              <input type="checkbox" ${isChecked ? 'checked' : ''}
+                onclick="event.stopPropagation(); toggleBankTransferCheck('${snapId}', '${safeBankArg}')"
+                title="Mark ${bankName} transfer complete"
+                class="aesthetic-checkbox" />
+              <div class="min-w-0 flex flex-col">
+                <span class="inline-block w-fit px-2.5 py-0.5 rounded-md text-xs font-bold ${getBankPillClass(bankName)} ${isChecked ? 'line-through opacity-75' : ''}">
+                  ${bankName}
+                </span>
+                <span class="text-[10px] mt-0.5" style="color: var(--text-secondary)">
+                  ${items.length} item${items.length === 1 ? '' : 's'}
+                </span>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-1.5 shrink-0">
+              <span class="text-sm font-extrabold mono-num ${isChecked ? 'text-emerald-400 line-through' : ''}">
+                ${formatPHP(bankTotal)}
+              </span>
+              <i data-lucide="chevron-down" class="bank-chevron w-4 h-4 text-slate-400 transition-transform duration-200 ${chevronRotate}"></i>
+            </div>
+          </div>
+
+          <div class="bank-accordion accordion-content ${expandedClass}">
+            <div class="accordion-inner">
+              <div class="px-3.5 pb-3 pt-2 border-t app-divider space-y-1.5">
+                ${items.map(it => `
+                  <div class="flex items-center justify-between gap-2 text-xs">
+                    <span class="truncate" style="color: var(--text-secondary)">${it.label}</span>
+                    <span class="font-bold mono-num shrink-0">${formatPHP(it.amount)}</span>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderCollapsibleWeekDropdownHTML(snap, isExpanded = false, groupClass = 'upcoming') {
+      const { entries, zeroBanks, grandTotal } = buildBankBreakdownForSnapshot(snap);
+      const safeSnapId = snap.id.replace(/'/g, "\\'");
+      const badgeCls = groupClass === 'old'
+        ? 'bg-slate-500/15 border border-slate-500/30 text-slate-300'
+        : 'bg-emerald-500/15 border border-emerald-500/30 text-emerald-400';
+
+      return `
+        <div class="app-subcard rounded-2xl overflow-hidden border border-transparent hover:border-blue-500/35 transition">
+          <!-- Collapsed Week Dropdown Header -->
+          <div onclick="toggleSavedWeekDropdown('${safeSnapId}')"
+            class="p-3.5 flex items-center justify-between gap-3 cursor-pointer">
+            <div class="flex items-center gap-2.5 min-w-0">
+              <span class="px-2.5 py-1 rounded-lg ${badgeCls} text-xs font-bold shrink-0">
+                ${snap.weekBadge}
+              </span>
+              <span class="text-[11px] truncate hidden sm:inline" style="color: var(--text-secondary)">
+                ${entries.length} active bank${entries.length === 1 ? '' : 's'}
+              </span>
+            </div>
+
+            <div class="flex items-center gap-2 shrink-0">
+              <span class="text-sm font-extrabold text-emerald-400 mono-num">
+                ${formatPHP(grandTotal)}
+              </span>
+              <i id="week-drop-chev-${snap.id}" data-lucide="chevron-down"
+                class="${groupClass}-week-chevron w-4 h-4 text-slate-400 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}"></i>
+            </div>
+          </div>
+
+          <!-- Expandable Week Dropdown Body -->
+          <div id="week-drop-body-${snap.id}" class="${groupClass}-week-accordion accordion-content ${isExpanded ? 'open' : ''}">
+            <div class="accordion-inner">
+              <div class="px-3.5 pb-3.5 pt-2.5 border-t app-divider space-y-2.5">
+                <div class="flex items-center justify-between gap-2 text-[11px]">
+                  <span style="color: var(--text-secondary)">
+                    Target Range: <strong>${snap.targetRange || snap.weekBadge}</strong>
+                  </span>
+                  <button type="button" onclick="event.stopPropagation(); loadSavedWeekById('${safeSnapId}')"
+                    class="px-2.5 py-1 rounded-lg bg-blue-600/15 hover:bg-blue-600/25 text-blue-400 border border-blue-500/30 text-[11px] font-semibold transition flex items-center gap-1">
+                    <i data-lucide="arrow-up-right" class="w-3 h-3"></i>
+                    <span>Load in Allocation</span>
+                  </button>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  ${entries.length > 0
+                    ? entries.map(({ bankName, items }) => renderBankCardItemHTML(snap.id, bankName, items, false)).join('')
+                    : `<div class="sm:col-span-2 text-xs text-center py-4 opacity-60">No allocations recorded for this week.</div>`}
+                </div>
+
+                ${zeroBanks.length > 0 ? `
+                  <div class="pt-1.5 text-[10px] flex flex-wrap items-center gap-1.5 opacity-65">
+                    <span>₱0.00 Banks:</span>
+                    ${zeroBanks.map(b => `<span class="px-1.5 py-0.5 rounded app-card">${b}</span>`).join('')}
+                  </div>
+                ` : ''}
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderSavedPage() {
+      const currentCardsEl = document.getElementById('saved-current-bank-cards');
+      const upcomingListEl = document.getElementById('saved-upcoming-weeks-list');
+      if (!currentCardsEl || !upcomingListEl) return;
+
+      if (appState.savedAllocations.length === 0) {
+        autoSaveCurrentWeek(true);
+      }
+
+      const activeWeekId = `${appState.targetStartDate}_${appState.targetEndDate}`;
+      let currentSnap = appState.savedAllocations.find(s => s.id === activeWeekId);
+      if (!currentSnap) {
+        autoSaveCurrentWeek(true);
+        currentSnap = appState.savedAllocations.find(s => s.id === activeWeekId) || appState.savedAllocations[0];
+      }
+
+      // Render Left Panel: Current Week (2 Columns, High to Low, Zero-Allocation Banks Collapsed at Bottom)
+      if (currentSnap) {
+        const badgeEl = document.getElementById('saved-current-week-badge');
+        const rangeEl = document.getElementById('saved-current-week-range');
+        const totalEl = document.getElementById('saved-current-grand-total');
+        if (badgeEl) badgeEl.textContent = currentSnap.weekBadge;
+        if (rangeEl) rangeEl.textContent = currentSnap.targetRange || formatFullRange(currentSnap.targetStartDate, currentSnap.targetEndDate);
+
+        const { entries, zeroBanks, grandTotal } = buildBankBreakdownForSnapshot(currentSnap);
+        if (totalEl) totalEl.textContent = formatPHP(grandTotal);
+
+        currentCardsEl.innerHTML = entries.length > 0
+          ? entries.map(({ bankName, items }) => renderBankCardItemHTML(currentSnap.id, bankName, items, true)).join('')
+          : `<div class="md:col-span-2 text-center py-8 text-xs opacity-60">No allocations recorded for the current week yet.</div>`;
+
+        const zeroWrapper = document.getElementById('saved-current-zero-banks-wrapper');
+        const zeroCountEl = document.getElementById('saved-current-zero-count');
+        const zeroListEl = document.getElementById('saved-current-zero-list');
+        if (zeroWrapper && zeroListEl) {
+          if (zeroBanks.length > 0) {
+            zeroWrapper.classList.remove('hidden');
+            if (zeroCountEl) zeroCountEl.textContent = zeroBanks.length;
+            zeroListEl.innerHTML = zeroBanks.map(b => `
+              <span class="px-2.5 py-1 rounded-lg text-[11px] font-semibold opacity-75 ${getBankPillClass(b)}">
+                ${b} &bull; ₱0.00
+              </span>
+            `).join('');
+          } else {
+            zeroWrapper.classList.add('hidden');
+          }
+        }
+      }
+
+      // Right Panel: Upcoming Weeks ONLY (finished weeks go to Previous Old Weeks page)
+      const curStart = currentSnap?.targetStartDate || appState.targetStartDate;
+      const upcomingWeeks = appState.savedAllocations
+        .filter(s => s.id !== currentSnap?.id && !isWeekFinished(s) && (s.targetStartDate || '') >= curStart)
+        .sort((a, b) => (a.targetStartDate || '').localeCompare(b.targetStartDate || ''));
+
+      const upcomingCountEl = document.getElementById('saved-upcoming-count');
+      if (upcomingCountEl) upcomingCountEl.textContent = upcomingWeeks.length;
+
+      upcomingListEl.innerHTML = upcomingWeeks.length > 0
+        ? upcomingWeeks.map(snap => renderCollapsibleWeekDropdownHTML(snap, allUpcomingWeeksExpanded, 'upcoming')).join('')
+        : `<div class="text-center py-8 px-4 rounded-xl app-subcard text-xs opacity-65">
+             No upcoming weeks saved yet. Click or drag future dates on the calendar to plan ahead.
+           </div>`;
+
+      renderOldWeeksPage();
+      if (window.lucide) lucide.createIcons();
+    }
+
+    function toggleCurrentZeroBanksAccordion() {
+      const body = document.getElementById('saved-current-zero-body');
+      const chev = document.getElementById('saved-current-zero-chev');
+      if (!body) return;
+      body.classList.toggle('open');
+      if (chev) chev.classList.toggle('rotate-180');
+    }
+
+    function renderOldWeeksPage() {
+      const listEl = document.getElementById('old-weeks-list');
+      const countEl = document.getElementById('old-weeks-total-count');
+      const totalEl = document.getElementById('old-weeks-grand-total');
+      if (!listEl) return;
+
+      const finishedWeeks = (Array.isArray(appState.savedAllocations) ? appState.savedAllocations : [])
+        .filter(s => isWeekFinished(s))
+        .sort((a, b) => (b.targetStartDate || '').localeCompare(a.targetStartDate || ''));
+
+      if (countEl) countEl.textContent = finishedWeeks.length;
+
+      let archivedSum = 0;
+      finishedWeeks.forEach(snap => {
+        archivedSum += buildBankBreakdownForSnapshot(snap).grandTotal;
+      });
+      if (totalEl) totalEl.textContent = formatPHP(archivedSum);
+
+      listEl.innerHTML = finishedWeeks.length > 0
+        ? finishedWeeks.map(snap => renderCollapsibleWeekDropdownHTML(snap, allOldWeeksExpanded, 'old')).join('')
+        : `<div class="lg:col-span-2 app-card rounded-2xl p-10 text-center space-y-2">
+             <div class="w-10 h-10 rounded-xl app-subcard mx-auto flex items-center justify-center text-slate-400">
+               <i data-lucide="archive" class="w-5 h-5"></i>
+             </div>
+             <div class="text-sm font-bold">No Previous Old Weeks Yet</div>
+             <p class="text-xs max-w-md mx-auto" style="color: var(--text-secondary)">
+               Once a budget week finishes (past its Sunday end date), it automatically moves here from your Saved &amp; Allocation views.
+             </p>
+           </div>`;
+
+      if (window.lucide) lucide.createIcons();
+    }
+
+    function toggleAllOldWeeks() {
+      allOldWeeksExpanded = !allOldWeeksExpanded;
+      const btn = document.getElementById('toggle-old-weeks-btn');
+      if (btn) btn.textContent = allOldWeeksExpanded ? 'Collapse All' : 'Expand All';
+      const list = document.getElementById('old-weeks-list');
+      if (!list) return;
+      list.querySelectorAll('.old-week-accordion').forEach(el => {
+        el.classList.toggle('open', allOldWeeksExpanded);
+      });
+      list.querySelectorAll('.old-week-chevron').forEach(el => {
+        el.classList.toggle('rotate-180', allOldWeeksExpanded);
+      });
+    }
+
+    function syncSetupChangesAcrossAllWeeks(changedItemId = null, changedField = null) {
       if (!Array.isArray(appState.savedAllocations)) return;
 
       const latestDebtBank = appState.debtBank || 'ShopeePay';
@@ -3700,16 +4094,29 @@ service cloud.firestore {
         const existingFixed = Array.isArray(snap.fixedItems) ? snap.fixedItems : [];
         snap.fixedItems = latestFixed.map(setupItem => {
           const prev = existingFixed.find(
-            ef => ef.id === setupItem.id || ef.name.toLowerCase() === setupItem.name.toLowerCase()
+            ef => ef.id === setupItem.id || (ef.name || '').trim().toLowerCase() === (setupItem.name || '').trim().toLowerCase()
           );
-          if (prev) {
+          if (setupItem.locked) {
             return {
+              ...setupItem,
+              weeklyAmount: Number(setupItem.weeklyAmount) || 0,
+              enabled: setupItem.enabled !== false,
+              locked: true
+            };
+          }
+          if (prev) {
+            const updated = {
               ...prev,
               id: setupItem.id,
               name: setupItem.name,
               cycleLabel: setupItem.cycleLabel,
-              bank: setupItem.bank
+              bank: setupItem.bank,
+              locked: !!setupItem.locked
             };
+            if (changedItemId === setupItem.id && (changedField === 'weeklyAmount' || changedField === 'enabled')) {
+              updated[changedField] = setupItem[changedField];
+            }
+            return updated;
           }
           return JSON.parse(JSON.stringify(setupItem));
         });
@@ -3829,6 +4236,8 @@ service cloud.firestore {
         item.weeklyAmount = evaluateMathExpr(val);
       } else if (field === 'enabled') {
         item.enabled = !!val;
+      } else if (field === 'locked') {
+        item.locked = !!val;
       } else {
         item[field] = val;
       }
@@ -3836,7 +4245,7 @@ service cloud.firestore {
       renderFixedExpensesList();
       recalculateBudget();
       autoSaveCurrentWeek(true);
-      syncSetupChangesAcrossAllWeeks();
+      syncSetupChangesAcrossAllWeeks(id, field);
       renderSavedPage();
       renderSetupPage();
       persistUserData(true);
@@ -4046,7 +4455,12 @@ service cloud.firestore {
             </select>
           </div>
 
-          <div class="sm:col-span-1 flex justify-end">
+          <div class="sm:col-span-1 flex items-center justify-end gap-1">
+            <button type="button" onclick="updateSetupFixedField('${item.id}', 'locked', ${!item.locked})"
+              title="${item.locked ? 'Locked across all weeks (Click to unlock)' : 'Click to lock across all weeks'}"
+              class="p-1.5 rounded-lg app-subcard ${item.locked ? 'text-amber-400 border-amber-500/40' : 'text-slate-400 hover:text-amber-400'} transition">
+              <i data-lucide="${item.locked ? 'lock' : 'unlock'}" class="w-3.5 h-3.5"></i>
+            </button>
             <button type="button" onclick="deleteSetupFixed('${item.id}')" title="Delete expense"
               class="p-1.5 rounded-lg text-slate-500 hover:text-rose-400 transition">
               <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
@@ -4132,6 +4546,7 @@ service cloud.firestore {
       recalculateBudget();
       renderDebtsPage();
       renderSavedPage();
+      renderOldWeeksPage();
       renderSetupPage();
       renderActivityLog();
       if (window.lucide) lucide.createIcons();
