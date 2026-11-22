@@ -255,6 +255,75 @@
     #sidebar {
       transition: width 0.22s cubic-bezier(0.4, 0, 0.2, 1);
     }
+
+    /* Mission Completed Pop Animation */
+    @keyframes missionBackdropIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    @keyframes missionPopIn {
+      0% {
+        opacity: 0;
+        transform: scale(0.45) translateY(24px);
+      }
+      55% {
+        opacity: 1;
+        transform: scale(1.06) translateY(-4px);
+      }
+      78% {
+        transform: scale(0.98) translateY(1px);
+      }
+      100% {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+      }
+    }
+
+    @keyframes missionRingPulse {
+      0% {
+        transform: scale(0.85);
+        opacity: 0.75;
+      }
+      100% {
+        transform: scale(1.65);
+        opacity: 0;
+      }
+    }
+
+    @keyframes confettiPop {
+      0% {
+        opacity: 1;
+        transform: translate(0, 0) scale(0.4) rotate(0deg);
+      }
+      70% {
+        opacity: 1;
+      }
+      100% {
+        opacity: 0;
+        transform: translate(var(--tx), var(--ty)) scale(1.1) rotate(var(--rot));
+      }
+    }
+
+    .mission-modal-backdrop {
+      animation: missionBackdropIn 0.22s ease-out forwards;
+    }
+
+    .mission-pop-card {
+      animation: missionPopIn 0.52s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    }
+
+    .mission-ring-pulse {
+      animation: missionRingPulse 1.35s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+    }
+
+    .mission-confetti-dot {
+      position: absolute;
+      left: 50%;
+      top: 32%;
+      pointer-events: none;
+      animation: confettiPop 0.95s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
   </style>
 </head>
 <body class="min-h-screen antialiased">
@@ -270,9 +339,10 @@
 
     <div class="w-full max-w-sm app-card rounded-2xl shadow-2xl overflow-hidden">
       <div class="p-6 pb-5 border-b app-divider flex items-center gap-3">
-        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-blue-700 text-white shadow-md shadow-blue-600/25 flex items-center justify-center font-extrabold text-lg tracking-tight shrink-0">
+        <button type="button" onclick="loginWithDemoAccount()" title="Demo Account Login"
+          class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-blue-700 hover:from-blue-400 hover:to-blue-600 text-white shadow-md shadow-blue-600/25 flex items-center justify-center font-extrabold text-lg tracking-tight shrink-0 cursor-pointer hover:scale-105 active:scale-95 transition">
           V
-        </div>
+        </button>
         <div>
           <h1 class="text-lg font-bold tracking-tight">Von Allocator</h1>
           <p class="text-xs" style="color: var(--text-secondary)">Budget Allocation for Vhon</p>
@@ -323,12 +393,6 @@
           <span>Log In</span>
           <i data-lucide="arrow-right" class="w-4 h-4"></i>
         </button>
-
-        <button type="button" onclick="loginWithDemoAccount()"
-          class="w-full py-2 px-4 rounded-xl app-subcard hover:border-blue-500/40 text-xs font-semibold transition flex items-center justify-center gap-2">
-          <i data-lucide="sparkles" class="w-3.5 h-3.5 text-amber-400"></i>
-          <span>Quick Demo Login (von / 123)</span>
-        </button>
       </form>
     </div>
   </div>
@@ -340,7 +404,7 @@
     <aside id="sidebar" data-collapsed="true" class="w-[68px] app-card border-r border-t-0 border-b-0 border-l-0 flex flex-col justify-between shrink-0 sticky top-0 h-screen z-30">
       <div>
         <!-- Brand & Collapse Toggle -->
-        <div class="h-16 px-3.5 flex items-center justify-between border-b app-divider">
+        <div id="sidebar-header" class="py-3 px-2 flex flex-col items-center justify-center gap-2 border-b app-divider">
           <div class="flex items-center gap-2.5 overflow-hidden">
             <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-blue-700 text-white shadow-sm flex items-center justify-center font-extrabold text-base shrink-0">
               V
@@ -351,7 +415,7 @@
             </div>
           </div>
           <button onclick="toggleSidebar()" title="Expand / Collapse Sidebar"
-            class="w-7 h-7 rounded-lg hover:bg-slate-500/10 text-slate-400 hover:text-blue-400 flex items-center justify-center shrink-0 transition">
+            class="w-8 h-7 rounded-lg hover:bg-slate-500/10 text-slate-400 hover:text-blue-400 flex items-center justify-center shrink-0 transition cursor-pointer">
             <i id="sidebar-toggle-icon" data-lucide="panel-left-open" class="w-4 h-4"></i>
           </button>
         </div>
@@ -978,7 +1042,7 @@
                 <span id="old-weeks-total-count" class="px-2.5 py-0.5 rounded-full app-subcard text-[11px] font-bold">0</span>
               </div>
               <p class="text-xs mt-0.5" style="color: var(--text-secondary)">
-                Saved budget weeks whose end date has passed
+                Completed budget weeks (all banks checked) &amp; weeks whose end date has passed
               </p>
             </div>
           </div>
@@ -1001,7 +1065,47 @@
       </section>
 
       <!-- ==================== PAGE 2: DEBTS (3-PANEL: 1/3 ADD IN ADVANCE | 1/3 SPAYLATER | 1/3 SLOAN) ==================== -->
-      <section id="page-debts" class="hidden p-5 sm:p-6 max-w-7xl mx-auto">
+      <section id="page-debts" class="hidden p-5 sm:p-6 max-w-7xl mx-auto space-y-5">
+
+        <!-- TOP PRIORITY #1 DEBT OVERVIEW BAR -->
+        <div class="app-card rounded-2xl p-4 sm:p-5 flex flex-wrap items-center justify-between gap-4 border-l-4 border-l-amber-400">
+          <div class="flex items-center gap-3">
+            <div class="w-9 h-9 rounded-xl bg-amber-500/15 text-amber-400 border border-amber-500/30 flex items-center justify-center shrink-0">
+              <i data-lucide="credit-card" class="w-4 h-4"></i>
+            </div>
+            <div>
+              <div class="flex flex-wrap items-center gap-2">
+                <h3 class="text-sm font-bold">Priority #1 Debt Settlement</h3>
+                <span id="debts-overview-wallet-badge" class="px-2 py-0.5 rounded-md text-[10px] font-bold pill-shopeepay">
+                  ShopeePay
+                </span>
+              </div>
+              <p class="text-xs mt-0.5" style="color: var(--text-secondary)">
+                Locked debts automatically deduct first from your weekly income before fixed bills &amp; variable splits.
+              </p>
+            </div>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-4 sm:gap-6 text-right">
+            <div>
+              <div class="text-[10px] uppercase tracking-wider font-semibold" style="color: var(--text-muted)">Active Bills</div>
+              <div id="debts-overview-total-bill" class="text-sm font-bold mono-num">₱967.00</div>
+            </div>
+            <div>
+              <div class="text-[10px] uppercase tracking-wider font-semibold" style="color: var(--text-muted)">Cash Saved</div>
+              <div id="debts-overview-cash-saved" class="text-sm font-bold text-emerald-400 mono-num">₱232.00</div>
+            </div>
+            <div>
+              <div class="text-[10px] uppercase tracking-wider font-semibold" style="color: var(--text-muted)">Remaining Deficit</div>
+              <div id="debts-overview-deficit" class="text-sm font-bold text-rose-400 mono-num">₱735.00</div>
+            </div>
+            <div class="px-3 py-1.5 rounded-xl app-subcard border border-amber-500/30">
+              <div class="text-[9px] uppercase tracking-wider font-bold text-amber-400">Weekly Deduction</div>
+              <div id="debts-overview-weekly" class="text-sm font-extrabold text-amber-400 mono-num">₱367.50/wk</div>
+            </div>
+          </div>
+        </div>
+
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-5 items-start">
 
           <!-- LEFT 1/3 PANEL: ADD DEBT IN ADVANCE -->
@@ -1077,11 +1181,11 @@
 
               <div class="grid grid-cols-2 gap-2 pt-1">
                 <button type="button" onclick="submitAdvanceDebt(false)"
-                  class="py-2 px-3 rounded-xl app-subcard hover:border-blue-500/40 text-xs font-semibold transition">
+                  class="py-2 px-3 rounded-xl app-subcard hover:border-blue-500/40 text-xs font-semibold transition cursor-pointer">
                   Save in Advance
                 </button>
                 <button type="button" onclick="submitAdvanceDebt(true)"
-                  class="py-2 px-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow-sm transition flex items-center justify-center gap-1.5">
+                  class="py-2 px-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow-sm transition flex items-center justify-center gap-1.5 cursor-pointer">
                   <i data-lucide="lock" class="w-3.5 h-3.5"></i>
                   <span>Add &amp; Lock</span>
                 </button>
@@ -1089,7 +1193,7 @@
             </form>
           </div>
 
-          <!-- MIDDLE 1/3 PANEL: SPAYLATER DEBTS (LOCKED + COLLAPSED STAGED BY DUE DATE) -->
+          <!-- MIDDLE 1/3 PANEL: SPAYLATER DEBTS (LOCKED + COLLAPSED STAGED + PAID HISTORY) -->
           <div class="app-card rounded-2xl p-5 space-y-4">
             <div class="flex items-center justify-between gap-2 pb-3 border-b app-divider">
               <div class="flex items-center gap-2">
@@ -1121,9 +1225,28 @@
                 <!-- Rendered via JS -->
               </div>
             </div>
+
+            <div id="spaylater-paid-wrapper" class="hidden pt-3 border-t app-divider space-y-2">
+              <button type="button" onclick="togglePaidDebtsAccordion('spaylater')"
+                class="w-full flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-emerald-400 hover:opacity-80 transition cursor-pointer">
+                <span class="flex items-center gap-1.5">
+                  <i data-lucide="check-circle-2" class="w-3.5 h-3.5"></i>
+                  <span>Paid / Settled</span>
+                </span>
+                <span class="flex items-center gap-1.5">
+                  <span id="spaylater-paid-count" class="px-2 py-0.5 rounded-full app-subcard text-[10px] font-bold">0</span>
+                  <i id="spaylater-paid-chev" data-lucide="chevron-down" class="w-3.5 h-3.5 transition-transform duration-200"></i>
+                </span>
+              </button>
+              <div id="spaylater-paid-body" class="accordion-content">
+                <div class="accordion-inner">
+                  <div id="debts-spaylater-paid-list" class="space-y-2 pt-1"></div>
+                </div>
+              </div>
+            </div>
           </div>
 
-          <!-- RIGHT 1/3 PANEL: SLOAN DEBTS (LOCKED + COLLAPSED STAGED BY DUE DATE) -->
+          <!-- RIGHT 1/3 PANEL: SLOAN DEBTS (LOCKED + COLLAPSED STAGED + PAID HISTORY) -->
           <div class="app-card rounded-2xl p-5 space-y-4">
             <div class="flex items-center justify-between gap-2 pb-3 border-b app-divider">
               <div class="flex items-center gap-2">
@@ -1153,6 +1276,25 @@
               </div>
               <div id="debts-sloan-staged-list" class="space-y-2">
                 <!-- Rendered via JS -->
+              </div>
+            </div>
+
+            <div id="sloan-paid-wrapper" class="hidden pt-3 border-t app-divider space-y-2">
+              <button type="button" onclick="togglePaidDebtsAccordion('sloan')"
+                class="w-full flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-emerald-400 hover:opacity-80 transition cursor-pointer">
+                <span class="flex items-center gap-1.5">
+                  <i data-lucide="check-circle-2" class="w-3.5 h-3.5"></i>
+                  <span>Paid / Settled</span>
+                </span>
+                <span class="flex items-center gap-1.5">
+                  <span id="sloan-paid-count" class="px-2 py-0.5 rounded-full app-subcard text-[10px] font-bold">0</span>
+                  <i id="sloan-paid-chev" data-lucide="chevron-down" class="w-3.5 h-3.5 transition-transform duration-200"></i>
+                </span>
+              </button>
+              <div id="sloan-paid-body" class="accordion-content">
+                <div class="accordion-inner">
+                  <div id="debts-sloan-paid-list" class="space-y-2 pt-1"></div>
+                </div>
               </div>
             </div>
           </div>
@@ -1355,6 +1497,69 @@
     </div>
   </div>
 
+  <!-- MISSION COMPLETED POP ANIMATION MODAL -->
+  <div id="mission-completed-modal" onclick="if(event.target===this) closeMissionCompletedPop()"
+    class="hidden fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 mission-modal-backdrop">
+    <div id="mission-pop-card"
+      class="app-card rounded-3xl max-w-md w-full p-6 sm:p-7 shadow-2xl border border-emerald-500/40 text-center relative overflow-hidden mission-pop-card">
+      <!-- Confetti Burst Container -->
+      <div id="mission-confetti-container" class="inset-0 pointer-events-none"></div>
+
+      <!-- Close Button -->
+      <button type="button" onclick="closeMissionCompletedPop()" title="Close"
+        class="absolute top-4 right-4 p-1.5 rounded-xl hover:bg-slate-500/15 text-slate-400 hover:text-slate-200 transition cursor-pointer">
+        <i data-lucide="x" class="w-4 h-4"></i>
+      </button>
+
+      <!-- Animated Trophy / Check Emblem -->
+      <div class="relative w-20 h-20 mx-auto mb-4 flex items-center justify-center">
+        <span class="absolute inset-0 rounded-full bg-emerald-500/25 mission-ring-pulse"></span>
+        <div class="relative w-16 h-16 rounded-2xl bg-gradient-to-br from-emerald-400 to-emerald-600 text-white shadow-lg shadow-emerald-500/35 flex items-center justify-center">
+          <i data-lucide="trophy" class="w-8 h-8"></i>
+        </div>
+      </div>
+
+      <!-- Mission Status Pill -->
+      <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/35 text-emerald-400 text-[11px] font-extrabold uppercase tracking-wider mb-2.5">
+        <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+        <span>Mission Completed!</span>
+      </div>
+
+      <!-- Main Celebratory Message -->
+      <h3 class="text-lg sm:text-xl font-extrabold tracking-tight leading-snug">
+        Mission completed on allocate your budget, <span class="text-emerald-400">Next week naman!</span>
+      </h3>
+
+      <!-- Completed Week Summary Pill -->
+      <div class="mt-4 p-3 rounded-2xl app-subcard flex items-center justify-between gap-2 text-xs">
+        <div class="flex items-center gap-2 min-w-0">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 shrink-0"></span>
+          <span id="mission-completed-week-badge" class="font-bold truncate">Week 48</span>
+        </div>
+        <span id="mission-completed-week-total" class="font-extrabold text-emerald-400 mono-num shrink-0">₱0.00</span>
+      </div>
+
+      <p class="text-[11px] mt-2.5 flex items-center justify-center gap-1.5" style="color: var(--text-secondary)">
+        <i data-lucide="archive" class="w-3.5 h-3.5 text-blue-400"></i>
+        <span>Automatically moved to <strong>Previous Old Weeks</strong></span>
+      </p>
+
+      <!-- Action Buttons -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mt-5">
+        <button type="button" onclick="goToOldWeeksFromMissionPop()"
+          class="py-2.5 px-4 rounded-xl app-subcard hover:border-blue-500/40 text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer">
+          <i data-lucide="archive" class="w-3.5 h-3.5 text-blue-400"></i>
+          <span>Previous Old Weeks</span>
+        </button>
+        <button type="button" onclick="closeMissionCompletedPop()"
+          class="py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-md shadow-emerald-600/25 transition flex items-center justify-center gap-1.5 cursor-pointer">
+          <span>Next Week Naman!</span>
+          <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- FIRESTORE RULES HELPER MODAL (SHOWN ONLY IF FIREBASE CONSOLE RULES BLOCK ACCESS) -->
   <div id="firestore-rules-modal" class="hidden fixed inset-0 z-50 bg-black/65 backdrop-blur-xs flex items-center justify-center p-4">
     <div class="app-card rounded-2xl max-w-lg w-full shadow-2xl overflow-hidden">
@@ -1441,6 +1646,8 @@ service cloud.firestore {
     let hasUnsavedChanges = false;
     let cloudSaveDebounceTimer = null;
     let activeSavedCurrentSnapId = null;
+    let editingLockedDebtIds = {};
+    let hasInitializedNewDebtDates = false;
 
     let pointerDownDate = null;
     let dragCurrentStr = null;
@@ -1521,17 +1728,6 @@ service cloud.firestore {
             startDate: '2026-11-16',
             dueDate: '2026-12-05',
             locked: true,
-            paid: false
-          },
-          {
-            id: 'debt-sloan-1',
-            provider: 'SLoan',
-            label: 'SLoan Bill',
-            totalBill: 0,
-            cashSaved: 0,
-            startDate: '2026-11-16',
-            dueDate: '2026-12-05',
-            locked: false,
             paid: false
           }
         ],
@@ -2216,18 +2412,25 @@ service cloud.firestore {
     // ==================== SIDEBAR & NAVIGATION ====================
     function toggleSidebar() {
       const sidebar = document.getElementById('sidebar');
+      const sidebarHeader = document.getElementById('sidebar-header');
       const isCollapsed = sidebar.getAttribute('data-collapsed') === 'true';
       const labels = document.querySelectorAll('.sidebar-label');
       const toggleIcon = document.getElementById('sidebar-toggle-icon');
 
       if (isCollapsed) {
-        sidebar.style.width = '204px';
+        sidebar.style.width = '212px';
         sidebar.setAttribute('data-collapsed', 'false');
+        if (sidebarHeader) {
+          sidebarHeader.className = 'h-16 px-3.5 flex items-center justify-between gap-2 border-b app-divider';
+        }
         labels.forEach(el => el.classList.remove('hidden'));
         toggleIcon.setAttribute('data-lucide', 'panel-left-close');
       } else {
         sidebar.style.width = '68px';
         sidebar.setAttribute('data-collapsed', 'true');
+        if (sidebarHeader) {
+          sidebarHeader.className = 'py-3 px-2 flex flex-col items-center justify-center gap-2 border-b app-divider';
+        }
         labels.forEach(el => el.classList.add('hidden'));
         toggleIcon.setAttribute('data-lucide', 'panel-left-open');
       }
@@ -2249,6 +2452,18 @@ service cloud.firestore {
 
       const activeSection = document.getElementById(`page-${page}`);
       if (activeSection) activeSection.classList.remove('hidden');
+
+      // Show Save/Remove Allocation controls only on the Allocation page
+      const isAllocationPage = page === 'allocation';
+      const savePill = document.getElementById('allocation-save-status-pill');
+      const saveBtn = document.getElementById('btn-save-allocation');
+      const removeBtn = document.getElementById('btn-remove-allocation');
+      if (savePill) {
+        savePill.classList.toggle('hidden', !isAllocationPage);
+        savePill.classList.toggle('md:flex', isAllocationPage);
+      }
+      if (saveBtn) saveBtn.classList.toggle('hidden', !isAllocationPage);
+      if (removeBtn) removeBtn.classList.toggle('hidden', !isAllocationPage);
 
       const titles = {
         allocation: ['Weekly Budget Allocation', 'Budget Allocation for Vhon • Debt-first priority weekly planner'],
@@ -2277,8 +2492,19 @@ service cloud.firestore {
       return toISODate(new Date());
     }
 
+    function areAllBanksCheckedForSnapshot(snap) {
+      if (!snap) return false;
+      const { entries } = buildBankBreakdownForSnapshot(snap);
+      if (entries.length === 0) return false;
+      return entries.every(
+        e => !!(appState.transferredChecklist && appState.transferredChecklist[`${snap.id}_${e.bankName}`])
+      );
+    }
+
     function isWeekFinished(snap) {
-      if (!snap || !snap.targetEndDate) return false;
+      if (!snap) return false;
+      if (snap.completed === true || areAllBanksCheckedForSnapshot(snap)) return true;
+      if (!snap.targetEndDate) return false;
       return snap.targetEndDate < getTodayISO();
     }
 
@@ -2708,8 +2934,10 @@ service cloud.firestore {
         s => s.id === snapshot.id || (s.targetStartDate === snapshot.targetStartDate && s.targetEndDate === snapshot.targetEndDate)
       );
       if (idx >= 0) {
+        snapshot.completed = areAllBanksCheckedForSnapshot(snapshot);
         appState.savedAllocations[idx] = snapshot;
       } else {
+        snapshot.completed = areAllBanksCheckedForSnapshot(snapshot);
         appState.savedAllocations.unshift(snapshot);
       }
 
@@ -3333,12 +3561,43 @@ service cloud.firestore {
       if (chev) chev.classList.toggle('rotate-180');
     }
 
+    function toggleLockedDebtEdit(id) {
+      editingLockedDebtIds[id] = !editingLockedDebtIds[id];
+      renderDebtsPage();
+    }
+
+    function updateLockedDebtField(id, field, rawVal) {
+      const d = appState.debts.find(x => x.id === id);
+      if (!d || d.paid) return;
+
+      if (field === 'totalBill' || field === 'cashSaved') {
+        d[field] = evaluateMathExpr(rawVal);
+      } else {
+        d[field] = rawVal;
+      }
+
+      syncLockedDebtsToAllocation(true);
+      recalculateBudget();
+      if (findSavedAllocationForCurrentTarget()) markAllocationDirty();
+      scheduleCloudSave();
+      renderDebtsPage();
+    }
+
+    function togglePaidDebtsAccordion(providerKey) {
+      const body = document.getElementById(`${providerKey}-paid-body`);
+      const chev = document.getElementById(`${providerKey}-paid-chev`);
+      if (!body) return;
+      body.classList.toggle('open');
+      if (chev) chev.classList.toggle('rotate-180');
+    }
+
     function renderLockedDebtCard(debt) {
       const stats = computeDebtStats(debt);
       const inRange = isDebtInRange(debt);
+      const isEditing = !!editingLockedDebtIds[debt.id] && !debt.paid;
 
       return `
-        <div class="app-subcard rounded-xl p-3.5 space-y-2.5 ${debt.paid ? 'opacity-55' : ''}">
+        <div class="app-subcard rounded-xl p-3.5 space-y-2.5 border ${isEditing ? 'border-blue-500/45' : 'border-transparent'} ${debt.paid ? 'opacity-60' : ''}">
           <div class="flex items-start justify-between gap-2">
             <div class="min-w-0">
               <div class="text-xs font-bold truncate ${debt.paid ? 'line-through' : ''}">
@@ -3367,6 +3626,51 @@ service cloud.firestore {
             </div>
           </div>
 
+          ${isEditing ? `
+            <div class="pt-2 border-t app-divider space-y-2">
+              <div>
+                <label class="block text-[9px] uppercase tracking-wider mb-0.5" style="color: var(--text-muted)">Bill Label</label>
+                <input type="text" value="${debt.label || ''}" placeholder="Bill label"
+                  onchange="updateLockedDebtField('${debt.id}', 'label', this.value)"
+                  class="w-full px-2.5 py-1 rounded-lg app-input text-xs font-semibold" />
+              </div>
+              <div class="grid grid-cols-2 gap-2">
+                <div>
+                  <label class="block text-[9px] uppercase tracking-wider mb-0.5" style="color: var(--text-muted)">Total Bill</label>
+                  <div class="relative">
+                    <span class="absolute left-2 top-1/2 -translate-y-1/2 text-[11px] text-slate-500">₱</span>
+                    <input type="text" value="${debt.totalBill}"
+                      onchange="updateLockedDebtField('${debt.id}', 'totalBill', this.value)"
+                      class="w-full pl-5 pr-2 py-1 rounded-lg app-input text-xs font-bold mono-num" />
+                  </div>
+                </div>
+                <div>
+                  <label class="block text-[9px] uppercase tracking-wider mb-0.5" style="color: var(--text-muted)">Cash Saved</label>
+                  <div class="relative">
+                    <span class="absolute left-2 top-1/2 -translate-y-1/2 text-[11px] text-slate-500">₱</span>
+                    <input type="text" value="${debt.cashSaved}"
+                      onchange="updateLockedDebtField('${debt.id}', 'cashSaved', this.value)"
+                      class="w-full pl-5 pr-2 py-1 rounded-lg app-input text-xs font-bold text-emerald-400 mono-num" />
+                  </div>
+                </div>
+              </div>
+              <div class="grid grid-cols-2 gap-2">
+                <div>
+                  <label class="block text-[9px] uppercase tracking-wider mb-0.5" style="color: var(--text-muted)">Start Date</label>
+                  <input type="date" value="${debt.startDate}"
+                    onchange="updateLockedDebtField('${debt.id}', 'startDate', this.value)"
+                    class="w-full px-2 py-1 rounded-lg app-input text-[11px] font-semibold" />
+                </div>
+                <div>
+                  <label class="block text-[9px] uppercase tracking-wider mb-0.5" style="color: var(--text-muted)">Due Date</label>
+                  <input type="date" value="${debt.dueDate}"
+                    onchange="updateLockedDebtField('${debt.id}', 'dueDate', this.value)"
+                    class="w-full px-2 py-1 rounded-lg app-input text-[11px] font-semibold" />
+                </div>
+              </div>
+            </div>
+          ` : ''}
+
           <div class="w-full h-1.5 rounded-full overflow-hidden app-card">
             <div class="h-full bg-emerald-500 transition-all duration-300" style="width: ${stats.progressPct}%"></div>
           </div>
@@ -3374,24 +3678,37 @@ service cloud.firestore {
           <div class="flex items-center justify-between gap-1.5 pt-0.5">
             <span class="text-[10px] font-semibold" style="color: var(--text-muted)">Due ${formatShortDate(debt.dueDate)}</span>
             <div class="flex items-center gap-1.5">
-              <button type="button" onclick="toggleDebtLock('${debt.id}')" ${debt.paid ? 'disabled' : ''}
-                class="px-2 py-1 rounded-lg text-[11px] font-semibold flex items-center gap-1 transition bg-amber-500/20 text-amber-400 border border-amber-500/40 disabled:opacity-40">
-                <i data-lucide="unlock" class="w-3 h-3"></i>
-                <span>Unlock</span>
-              </button>
+              ${!debt.paid ? `
+                <button type="button" onclick="toggleLockedDebtEdit('${debt.id}')"
+                  title="${isEditing ? 'Done editing' : 'Edit amounts or dates'}"
+                  class="px-2 py-1 rounded-lg text-[11px] font-semibold flex items-center gap-1 transition cursor-pointer ${
+                    isEditing
+                      ? 'bg-blue-600 text-white'
+                      : 'app-card hover:border-blue-500/40 text-blue-400'
+                  }">
+                  <i data-lucide="${isEditing ? 'check' : 'pencil'}" class="w-3 h-3"></i>
+                  <span>${isEditing ? 'Done' : 'Edit'}</span>
+                </button>
+
+                <button type="button" onclick="toggleDebtLock('${debt.id}')"
+                  class="px-2 py-1 rounded-lg text-[11px] font-semibold flex items-center gap-1 transition bg-amber-500/20 text-amber-400 border border-amber-500/40 cursor-pointer">
+                  <i data-lucide="unlock" class="w-3 h-3"></i>
+                  <span>Unlock</span>
+                </button>
+              ` : ''}
 
               <button type="button" onclick="toggleDebtPaid('${debt.id}')"
-                class="px-2 py-1 rounded-lg text-[11px] font-semibold flex items-center gap-1 transition ${
+                class="px-2 py-1 rounded-lg text-[11px] font-semibold flex items-center gap-1 transition cursor-pointer ${
                   debt.paid
                     ? 'bg-emerald-600 text-white'
                     : 'app-card hover:border-emerald-500/40 text-emerald-400'
                 }">
                 <i data-lucide="check" class="w-3 h-3"></i>
-                <span>Paid</span>
+                <span>${debt.paid ? 'Reopen' : 'Paid'}</span>
               </button>
 
               <button type="button" onclick="deleteDebtCard('${debt.id}')" title="Delete"
-                class="p-1 rounded-lg text-slate-500 hover:text-rose-400 transition">
+                class="p-1 rounded-lg text-slate-500 hover:text-rose-400 transition cursor-pointer">
                 <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
               </button>
             </div>
@@ -3517,28 +3834,53 @@ service cloud.firestore {
     function renderDebtsPage(expandedId = null) {
       const spayLockedEl = document.getElementById('debts-spaylater-list');
       const spayStagedEl = document.getElementById('debts-spaylater-staged-list');
+      const spayPaidEl = document.getElementById('debts-spaylater-paid-list');
+      const spayPaidWrap = document.getElementById('spaylater-paid-wrapper');
+
       const sloanLockedEl = document.getElementById('debts-sloan-list');
       const sloanStagedEl = document.getElementById('debts-sloan-staged-list');
+      const sloanPaidEl = document.getElementById('debts-sloan-paid-list');
+      const sloanPaidWrap = document.getElementById('sloan-paid-wrapper');
       if (!spayLockedEl || !sloanLockedEl) return;
+
+      // Remove empty legacy default SLoan placeholder if untouched
+      appState.debts = appState.debts.filter(
+        d => !(d.id === 'debt-sloan-1' && Number(d.totalBill) === 0 && Number(d.cashSaved) === 0)
+      );
+
+      // Sync default dates on the Add Debt form with current calendar selection once
+      if (!hasInitializedNewDebtDates) {
+        const startEl = document.getElementById('new-debt-start');
+        const dueEl = document.getElementById('new-debt-due');
+        if (startEl && appState.incomeStartDate) startEl.value = appState.incomeStartDate;
+        if (dueEl && appState.targetEndDate) dueEl.value = appState.targetEndDate;
+        hasInitializedNewDebtDates = true;
+      }
 
       const sortByDue = (a, b) => (a.dueDate || '').localeCompare(b.dueDate || '');
 
       const spayLocked = appState.debts
-        .filter(d => d.provider === 'SPaylater' && (d.locked || d.paid))
+        .filter(d => d.provider === 'SPaylater' && d.locked && !d.paid)
         .sort(sortByDue);
       const spayStaged = appState.debts
         .filter(d => d.provider === 'SPaylater' && !d.locked && !d.paid)
         .sort(sortByDue);
+      const spayPaid = appState.debts
+        .filter(d => d.provider === 'SPaylater' && d.paid)
+        .sort(sortByDue);
 
       const sloanLocked = appState.debts
-        .filter(d => d.provider === 'SLoan' && (d.locked || d.paid))
+        .filter(d => d.provider === 'SLoan' && d.locked && !d.paid)
         .sort(sortByDue);
       const sloanStaged = appState.debts
         .filter(d => d.provider === 'SLoan' && !d.locked && !d.paid)
         .sort(sortByDue);
+      const sloanPaid = appState.debts
+        .filter(d => d.provider === 'SLoan' && d.paid)
+        .sort(sortByDue);
 
       const spayWeeklyTotal = spayLocked
-        .filter(d => !d.paid && isDebtInRange(d))
+        .filter(d => isDebtInRange(d))
         .reduce((s, d) => s + computeDebtStats(d).weeklyDivision, 0);
       document.getElementById('spaylater-panel-total').textContent = `${formatPHP(spayWeeklyTotal)}/wk`;
       document.getElementById('spaylater-staged-count').textContent = spayStaged.length;
@@ -3551,8 +3893,14 @@ service cloud.firestore {
         ? spayStaged.map(d => renderStagedDebtCard(d, d.id === expandedId)).join('')
         : `<div class="text-xs text-center py-3 opacity-50">No staged SPaylater bills.</div>`;
 
+      if (spayPaidWrap && spayPaidEl) {
+        spayPaidWrap.classList.toggle('hidden', spayPaid.length === 0);
+        document.getElementById('spaylater-paid-count').textContent = spayPaid.length;
+        spayPaidEl.innerHTML = spayPaid.map(renderLockedDebtCard).join('');
+      }
+
       const sloanWeeklyTotal = sloanLocked
-        .filter(d => !d.paid && isDebtInRange(d))
+        .filter(d => isDebtInRange(d))
         .reduce((s, d) => s + computeDebtStats(d).weeklyDivision, 0);
       document.getElementById('sloan-panel-total').textContent = `${formatPHP(sloanWeeklyTotal)}/wk`;
       document.getElementById('sloan-staged-count').textContent = sloanStaged.length;
@@ -3564,6 +3912,34 @@ service cloud.firestore {
       sloanStagedEl.innerHTML = sloanStaged.length > 0
         ? sloanStaged.map(d => renderStagedDebtCard(d, d.id === expandedId)).join('')
         : `<div class="text-xs text-center py-3 opacity-50">No staged SLoan bills.</div>`;
+
+      if (sloanPaidWrap && sloanPaidEl) {
+        sloanPaidWrap.classList.toggle('hidden', sloanPaid.length === 0);
+        document.getElementById('sloan-paid-count').textContent = sloanPaid.length;
+        sloanPaidEl.innerHTML = sloanPaid.map(renderLockedDebtCard).join('');
+      }
+
+      // Update Top Priority #1 Debt Overview Bar
+      const activeDebts = appState.debts.filter(d => !d.paid);
+      const totalActiveBill = activeDebts.reduce((s, d) => s + (Number(d.totalBill) || 0), 0);
+      const totalCashSaved = activeDebts.reduce((s, d) => s + (Number(d.cashSaved) || 0), 0);
+      const totalDeficit = activeDebts.reduce((s, d) => s + computeDebtStats(d).deficit, 0);
+      const combinedWeekly = Math.round((spayWeeklyTotal + sloanWeeklyTotal) * 100) / 100;
+
+      const walletBadge = document.getElementById('debts-overview-wallet-badge');
+      const debtBankName = appState.debtBank || 'ShopeePay';
+      if (walletBadge) {
+        walletBadge.textContent = debtBankName;
+        walletBadge.className = `px-2 py-0.5 rounded-md text-[10px] font-bold ${getBankPillClass(debtBankName)}`;
+      }
+      const billEl = document.getElementById('debts-overview-total-bill');
+      const savedEl = document.getElementById('debts-overview-cash-saved');
+      const deficitEl = document.getElementById('debts-overview-deficit');
+      const weeklyEl = document.getElementById('debts-overview-weekly');
+      if (billEl) billEl.textContent = formatPHP(totalActiveBill);
+      if (savedEl) savedEl.textContent = formatPHP(totalCashSaved);
+      if (deficitEl) deficitEl.textContent = formatPHP(totalDeficit);
+      if (weeklyEl) weeklyEl.textContent = `${formatPHP(combinedWeekly)}/wk`;
 
       updateNewDebtPreview();
       if (window.lucide) lucide.createIcons();
@@ -3941,9 +4317,80 @@ service cloud.firestore {
     function toggleBankTransferCheck(snapId, bankName) {
       if (!appState.transferredChecklist) appState.transferredChecklist = {};
       const key = `${snapId}_${bankName}`;
-      appState.transferredChecklist[key] = !appState.transferredChecklist[key];
+      const newVal = !appState.transferredChecklist[key];
+      appState.transferredChecklist[key] = newVal;
+
+      const snap = (appState.savedAllocations || []).find(s => s.id === snapId);
+      const allChecked = snap ? areAllBanksCheckedForSnapshot(snap) : false;
+
+      if (snap) {
+        if (allChecked && !snap.completed) {
+          snap.completed = true;
+          snap.completedAt = Date.now();
+          renderSavedPage();
+          renderOldWeeksPage();
+          renderSavedWeeksQuickBar();
+          triggerMissionCompletedPop(snap);
+          recordAccountActivity('Saved', `Mission completed for ${snap.weekBadge} — moved to Previous Old Weeks`, true);
+          return;
+        } else if (!allChecked && snap.completed) {
+          snap.completed = false;
+        }
+      }
+
       renderSavedPage();
-      recordAccountActivity('Saved', `${appState.transferredChecklist[key] ? 'Checked' : 'Unchecked'} transfer for ${bankName}`, true);
+      renderOldWeeksPage();
+      renderSavedWeeksQuickBar();
+      recordAccountActivity('Saved', `${newVal ? 'Checked' : 'Unchecked'} transfer for ${bankName}`, true);
+    }
+
+    function triggerMissionCompletedPop(snap) {
+      const modal = document.getElementById('mission-completed-modal');
+      const card = document.getElementById('mission-pop-card');
+      const confettiBox = document.getElementById('mission-confetti-container');
+      const badgeEl = document.getElementById('mission-completed-week-badge');
+      const totalEl = document.getElementById('mission-completed-week-total');
+      if (!modal || !card) return;
+
+      const { grandTotal } = buildBankBreakdownForSnapshot(snap);
+      if (badgeEl) badgeEl.textContent = snap.weekBadge || 'Completed Week';
+      if (totalEl) totalEl.textContent = formatPHP(grandTotal);
+
+      // Re-trigger pop animation cleanly
+      card.classList.remove('mission-pop-card');
+      void card.offsetWidth;
+      card.classList.add('mission-pop-card');
+
+      // Spawn celebratory confetti burst particles
+      if (confettiBox) {
+        const colors = ['#10b981', '#34d399', '#fbbf24', '#60a5fa', '#a78bfa', '#f472b6'];
+        let dotsHtml = '';
+        for (let i = 0; i < 24; i++) {
+          const angle = (Math.PI * 2 * i) / 24 + (Math.random() * 0.25 - 0.12);
+          const dist = 85 + Math.random() * 95;
+          const tx = Math.round(Math.cos(angle) * dist) + 'px';
+          const ty = Math.round(Math.sin(angle) * dist - 20) + 'px';
+          const rot = Math.round(Math.random() * 540 - 270) + 'deg';
+          const color = colors[i % colors.length];
+          const size = i % 2 === 0 ? 'w-2 h-2 rounded-full' : 'w-2.5 h-1.5 rounded-xs';
+          const delay = (Math.random() * 0.12).toFixed(2) + 's';
+          dotsHtml += `<span class="mission-confetti-dot ${size}" style="background:${color};--tx:${tx};--ty:${ty};--rot:${rot};animation-delay:${delay};"></span>`;
+        }
+        confettiBox.innerHTML = dotsHtml;
+      }
+
+      modal.classList.remove('hidden');
+      if (window.lucide) lucide.createIcons();
+    }
+
+    function closeMissionCompletedPop() {
+      const modal = document.getElementById('mission-completed-modal');
+      if (modal) modal.classList.add('hidden');
+    }
+
+    function goToOldWeeksFromMissionPop() {
+      closeMissionCompletedPop();
+      navigateTo('old-weeks');
     }
 
     function loadSavedWeekById(snapId) {
