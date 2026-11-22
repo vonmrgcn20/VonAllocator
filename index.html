@@ -44,7 +44,7 @@
       --bg-input: #111622;
       --border-subtle: #232c3d;
       --border-strong: #2f3b52;
-      --text-primary: #f1f5f9;
+      --text-primary: #f1f9ff;
       --text-secondary: #94a3b8;
       --text-muted: #64748b;
     }
@@ -323,6 +323,12 @@
           <span>Log In</span>
           <i data-lucide="arrow-right" class="w-4 h-4"></i>
         </button>
+
+        <button type="button" onclick="loginWithDemoAccount()"
+          class="w-full py-2 px-4 rounded-xl app-subcard hover:border-blue-500/40 text-xs font-semibold transition flex items-center justify-center gap-2">
+          <i data-lucide="sparkles" class="w-3.5 h-3.5 text-amber-400"></i>
+          <span>Quick Demo Login (von / 123)</span>
+        </button>
       </form>
     </div>
   </div>
@@ -350,7 +356,7 @@
           </button>
         </div>
 
-        <!-- 4 Navigation Pages: Allocation, Debts, Saved, Setup -->
+        <!-- 5 Navigation Pages: Allocation, Debts, Saved, Previous Old Weeks, Setup -->
         <nav class="p-2.5 space-y-1.5 mt-2">
           <button onclick="navigateTo('allocation')" id="nav-allocation" title="Allocation"
             class="nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold bg-blue-600 text-white shadow-sm transition">
@@ -412,27 +418,43 @@
 
     <!-- MAIN CONTENT AREA -->
     <main class="flex-1 min-w-0 overflow-y-auto">
-      <!-- Top Header Bar with Target Week Calendar Popover + Light/Dark Toggle -->
+      <!-- Top Header Bar with Save/Remove Allocation Controls + Target Week Calendar Popover + Light/Dark Toggle -->
       <header class="sticky top-0 z-20 app-card border-t-0 border-l-0 border-r-0 px-5 sm:px-6 py-3 flex flex-wrap items-center justify-between gap-3 backdrop-blur-md">
         <div>
           <h2 id="page-title" class="text-base font-bold tracking-tight">Weekly Budget Allocation</h2>
           <p id="page-subtitle" class="text-xs" style="color: var(--text-secondary)">Budget Allocation for Vhon &bull; Debt-first priority weekly planner</p>
         </div>
 
-        <div class="flex items-center gap-2.5">
-          <!-- Auto-Save Live Status Pill -->
-          <div id="autosave-status-pill" title="All edits automatically save to your selected week and cloud database"
-            class="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/25 text-emerald-400 text-[11px] font-semibold">
-            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
-            <span id="autosave-status-text">Auto-Saved</span>
+        <div class="flex flex-wrap items-center gap-2">
+          <!-- Week Save Status Pill -->
+          <div id="allocation-save-status-pill"
+            class="hidden md:flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-slate-500/15 border border-slate-500/30 text-slate-400 text-[11px] font-semibold">
+            <span id="allocation-save-status-dot" class="w-1.5 h-1.5 rounded-full bg-slate-400"></span>
+            <span id="allocation-save-status-text">Not Saved</span>
           </div>
+
+          <!-- Save Allocation Button -->
+          <button type="button" id="btn-save-allocation" onclick="saveCurrentAllocation()"
+            title="Save current target week allocation"
+            class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow-sm shadow-blue-600/20 transition cursor-pointer">
+            <i data-lucide="bookmark-check" class="w-3.5 h-3.5"></i>
+            <span>Save Allocation</span>
+          </button>
+
+          <!-- Remove Allocation Button -->
+          <button type="button" id="btn-remove-allocation" onclick="removeCurrentAllocation()"
+            title="Remove current target week from saved allocations"
+            class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/35 text-rose-400 text-xs font-semibold transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed">
+            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+            <span class="hidden sm:inline">Remove Allocation</span>
+          </button>
 
           <!-- Interactive Target Week Pill with Small Popup Calendar Dropdown -->
           <div id="header-cal-wrapper" class="relative">
             <button type="button" onclick="toggleHeaderCalPopover(event)"
               class="flex items-center gap-2 px-3.5 py-1.5 rounded-full app-subcard hover:border-blue-500/50 text-xs transition cursor-pointer">
               <i data-lucide="calendar-range" class="w-3.5 h-3.5 text-blue-400"></i>
-              <span class="hidden sm:inline" style="color: var(--text-secondary)">Target Week:</span>
+              <span class="hidden lg:inline" style="color: var(--text-secondary)">Target Week:</span>
               <strong id="header-target-week" class="font-semibold">Nov 23 – Nov 29, 2026</strong>
               <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-slate-400"></i>
             </button>
@@ -576,7 +598,7 @@
                     <span>Paycheck-to-Expense Calendar</span>
                   </h3>
                   <p class="text-[11px] mt-1" style="color: var(--text-secondary)">
-                    <strong>Click</strong> payday &rarr; auto next week &bull; <strong>Drag</strong> &rarr; custom target budget week
+                    <strong>Click</strong> payday &rarr; next week &bull; <strong>Drag</strong> &rarr; custom target budget week
                   </p>
                 </div>
                 <div class="flex items-center gap-1.5">
@@ -607,7 +629,7 @@
               <div class="flex flex-wrap items-center gap-3.5 text-[10px] mt-2.5" style="color: var(--text-secondary)">
                 <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-amber-400 inline-block"></span> Today</span>
                 <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-blue-500 inline-block"></span> Payday (Click)</span>
-                <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-emerald-400 inline-block"></span> Target Budget Week (Drag or Auto)</span>
+                <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-emerald-400 inline-block"></span> Target Budget Week (Drag or Click Save)</span>
               </div>
             </div>
           </div>
@@ -647,15 +669,29 @@
                 </div>
               </div>
 
-              <!-- Saved Weeks Quick Switcher -->
-              <div class="mt-4 pt-3 border-t app-divider">
-                <div class="flex items-center justify-between mb-1.5">
-                  <span class="text-[10px] font-bold uppercase tracking-wider" style="color: var(--text-secondary)">
-                    Active &amp; Upcoming Weeks
-                  </span>
-                  <span id="week-saved-badge" class="text-[10px] font-semibold text-emerald-400">
-                    Auto-Saved
-                  </span>
+              <!-- Manually Saved Weeks Switcher + Save / Remove Actions -->
+              <div class="mt-4 pt-3 border-t app-divider space-y-2">
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                  <div class="flex items-center gap-1.5">
+                    <span class="text-[10px] font-bold uppercase tracking-wider" style="color: var(--text-secondary)">
+                      Active &amp; Upcoming Weeks
+                    </span>
+                    <span id="week-saved-badge" class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-500/15 text-slate-400">
+                      Not Saved
+                    </span>
+                  </div>
+                  <div class="flex items-center gap-1.5">
+                    <button type="button" id="card-btn-save-allocation" onclick="saveCurrentAllocation()"
+                      class="px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-semibold transition cursor-pointer flex items-center gap-1">
+                      <i data-lucide="bookmark-check" class="w-3 h-3"></i>
+                      <span>Save Allocation</span>
+                    </button>
+                    <button type="button" id="card-btn-remove-allocation" onclick="removeCurrentAllocation()"
+                      class="px-2.5 py-1 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 text-rose-400 text-[11px] font-semibold transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1">
+                      <i data-lucide="trash-2" class="w-3 h-3"></i>
+                      <span>Remove</span>
+                    </button>
+                  </div>
                 </div>
                 <div id="allocation-saved-weeks-bar" class="flex flex-wrap gap-1.5">
                   <!-- Rendered via JS -->
@@ -832,18 +868,23 @@
                 </div>
                 <div class="min-w-0">
                   <div class="flex items-center gap-2">
-                    <h3 class="text-sm font-bold">Current Week</h3>
+                    <h3 class="text-sm font-bold">Saved Current Week</h3>
                     <span id="saved-current-week-badge" class="px-2 py-0.5 rounded-md bg-blue-500/15 border border-blue-500/30 text-blue-400 text-[11px] font-bold truncate">
-                      Week 48
+                      None Saved
                     </span>
                   </div>
                   <p id="saved-current-week-range" class="text-[11px] mt-0.5" style="color: var(--text-secondary)">
-                    Nov 23 – Nov 29, 2026
+                    Save an allocation from the Allocation tab to view it here
                   </p>
                 </div>
               </div>
 
-              <div class="flex items-center gap-2 shrink-0">
+              <div class="flex flex-wrap items-center gap-2 shrink-0">
+                <button type="button" id="saved-current-remove-btn" onclick="removeSavedCurrentWeek()"
+                  class="hidden px-2.5 py-1.5 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 text-rose-400 text-[11px] font-semibold transition flex items-center gap-1 cursor-pointer">
+                  <i data-lucide="trash-2" class="w-3 h-3"></i>
+                  <span>Remove Allocation</span>
+                </button>
                 <button type="button" onclick="toggleCurrentWeekBankCards()" id="toggle-current-banks-btn"
                   class="px-2.5 py-1.5 rounded-lg app-subcard hover:border-blue-500/40 text-[11px] font-semibold transition">
                   Expand All
@@ -896,13 +937,13 @@
                 </div>
                 <div>
                   <div class="flex items-center gap-2">
-                    <h3 class="text-sm font-bold">Upcoming Weeks</h3>
+                    <h3 class="text-sm font-bold">Upcoming Saved Weeks</h3>
                     <span id="saved-upcoming-count" class="px-2 py-0.5 rounded-full app-subcard text-[11px] font-bold">
                       0
                     </span>
                   </div>
                   <p class="text-[11px] mt-0.5" style="color: var(--text-secondary)">
-                    Click any upcoming week dropdown to inspect or load
+                    Click any saved week dropdown to inspect, load, or remove
                   </p>
                 </div>
               </div>
@@ -937,7 +978,7 @@
                 <span id="old-weeks-total-count" class="px-2.5 py-0.5 rounded-full app-subcard text-[11px] font-bold">0</span>
               </div>
               <p class="text-xs mt-0.5" style="color: var(--text-secondary)">
-                Completed budget weeks automatically move here once their week ends
+                Saved budget weeks whose end date has passed
               </p>
             </div>
           </div>
@@ -1119,7 +1160,7 @@
         </div>
       </section>
 
-      <!-- ==================== PAGE 4: SETUP (BANKS, FIXED, VARIABLE % & DEBT-FIRST PRIORITY) ==================== -->
+      <!-- ==================== PAGE 5: SETUP (BANKS, FIXED, VARIABLE % & DEBT-FIRST PRIORITY) ==================== -->
       <section id="page-setup" class="hidden p-5 sm:p-6 max-w-7xl mx-auto space-y-5">
 
         <!-- Priority Rule Banner -->
@@ -1287,7 +1328,7 @@
               </div>
               <div>
                 <h3 class="text-sm font-bold">Account Activity Log</h3>
-                <p class="text-[11px]" style="color: var(--text-secondary)">All inputs &amp; actions automatically saved to your account in Firebase</p>
+                <p class="text-[11px]" style="color: var(--text-secondary)">Saved actions &amp; setup updates synced to your account in Firebase</p>
               </div>
             </div>
             <button type="button" onclick="manualCloudSync()"
@@ -1397,7 +1438,9 @@ service cloud.firestore {
     let allOldWeeksExpanded = false;
     let isRestoringWeekState = false;
     let hasCompletedInitialLoad = false;
+    let hasUnsavedChanges = false;
     let cloudSaveDebounceTimer = null;
+    let activeSavedCurrentSnapId = null;
 
     let pointerDownDate = null;
     let dragCurrentStr = null;
@@ -1463,8 +1506,8 @@ service cloud.firestore {
         debtBank: 'ShopeePay',
         spaylaterWeekly: 367.50,
         sloanWeekly: 0,
-        spaylaterLocked: false,
-        sloanLocked: false,
+        spaylaterLocked: true,
+        sloanLocked: true,
         banks: JSON.parse(JSON.stringify(DEFAULT_BANKS)),
         fixedItems: JSON.parse(JSON.stringify(DEFAULT_FIXED_ITEMS)),
         variableCategories: JSON.parse(JSON.stringify(DEFAULT_VARIABLE_CATEGORIES)),
@@ -1602,17 +1645,40 @@ service cloud.firestore {
     }
 
     // ==================== PERSISTENT LOGIN MEMORY & CLOUD ACCOUNTS ====================
+    const DEMO_ACCOUNT = { username: 'von', password: '123' };
+
     function initUsers() {
       let existing = {};
       try {
-        existing = JSON.parse(localStorage.getItem(STORAGE_KEY_USERS) || '{}');
+        const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY_USERS) || '{}');
+        if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+          existing = parsed;
+        }
       } catch (e) {}
-      if (!existing['von']) {
-        existing['von'] = { username: 'von', password: '123' };
-        try {
-          localStorage.setItem(STORAGE_KEY_USERS, JSON.stringify(existing));
-        } catch (e) {}
-      }
+
+      // Always ensure the built-in demo account (von / 123) remains valid
+      existing[DEMO_ACCOUNT.username] = {
+        username: DEMO_ACCOUNT.username,
+        password: DEMO_ACCOUNT.password
+      };
+      try {
+        localStorage.setItem(STORAGE_KEY_USERS, JSON.stringify(existing));
+      } catch (e) {}
+    }
+
+    function loginWithDemoAccount() {
+      switchAuthTab('login');
+      const userEl = document.getElementById('auth-username');
+      const passEl = document.getElementById('auth-password');
+      const errBox = document.getElementById('auth-error');
+      if (userEl) userEl.value = DEMO_ACCOUNT.username;
+      if (passEl) passEl.value = DEMO_ACCOUNT.password;
+      if (errBox) errBox.classList.add('hidden');
+
+      const remember = document.getElementById('auth-remember')?.checked !== false;
+      initUsers();
+      syncAccountToCloud(DEMO_ACCOUNT.username, DEMO_ACCOUNT.password);
+      completeLogin(DEMO_ACCOUNT.username, remember);
     }
 
     function savePersistentSession(username) {
@@ -1657,7 +1723,12 @@ service cloud.firestore {
     }
 
     async function syncAccountToCloud(username, password) {
-      if (firebaseReadyPromise) await firebaseReadyPromise;
+      if (firebaseReadyPromise) {
+        await Promise.race([
+          firebaseReadyPromise,
+          new Promise(resolve => setTimeout(() => resolve(false), 2000))
+        ]);
+      }
       if (!firestoreDB || !window.__firebaseSDK || firestorePermissionDenied) return;
       try {
         const { doc, setDoc } = window.__firebaseSDK;
@@ -1672,7 +1743,12 @@ service cloud.firestore {
     }
 
     async function fetchCloudAccount(username) {
-      if (firebaseReadyPromise) await firebaseReadyPromise;
+      if (firebaseReadyPromise) {
+        await Promise.race([
+          firebaseReadyPromise,
+          new Promise(resolve => setTimeout(() => resolve(false), 2000))
+        ]);
+      }
       if (!firestoreDB || !window.__firebaseSDK || firestorePermissionDenied) return null;
       try {
         const { doc, getDoc } = window.__firebaseSDK;
@@ -1693,56 +1769,79 @@ service cloud.firestore {
       const errText = document.getElementById('auth-error-text');
       const submitBtn = document.getElementById('auth-submit-btn');
 
+      if (errBox) errBox.classList.add('hidden');
       if (!username || !password) return;
+
+      initUsers();
       let users = {};
       try {
-        users = JSON.parse(localStorage.getItem(STORAGE_KEY_USERS) || '{}');
+        const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY_USERS) || '{}');
+        if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+          users = parsed;
+        }
       } catch (e) {}
 
       submitBtn.disabled = true;
 
-      if (authMode === 'login') {
-        if (users[username] && users[username].password === password) {
-          submitBtn.disabled = false;
-          syncAccountToCloud(username, password);
-          completeLogin(username, remember);
-          return;
-        }
+      try {
+        if (authMode === 'login') {
+          const isBuiltInDemo = username === DEMO_ACCOUNT.username && password === DEMO_ACCOUNT.password;
+          if (isBuiltInDemo || (users[username] && users[username].password === password)) {
+            syncAccountToCloud(username, password);
+            await completeLogin(username, remember);
+            return;
+          }
 
-        // Cross-device account lookup in Firebase if logging in on a new device
-        const cloudAcc = await fetchCloudAccount(username);
-        submitBtn.disabled = false;
+          // Cross-device account lookup in Firebase if logging in on a new device
+          const cloudAcc = await fetchCloudAccount(username);
 
-        if (cloudAcc && cloudAcc.password === password) {
-          users[username] = { username, password };
-          try {
-            localStorage.setItem(STORAGE_KEY_USERS, JSON.stringify(users));
-          } catch (e) {}
-          completeLogin(username, remember);
+          if (cloudAcc && cloudAcc.password === password) {
+            users[username] = { username, password };
+            try {
+              localStorage.setItem(STORAGE_KEY_USERS, JSON.stringify(users));
+            } catch (e) {}
+            await completeLogin(username, remember);
+          } else {
+            errText.textContent = 'Invalid username or passkey.';
+            errBox.classList.remove('hidden');
+          }
         } else {
-          errText.textContent = 'Invalid username or passkey.';
-          errBox.classList.remove('hidden');
-        }
-      } else {
-        const cloudAcc = await fetchCloudAccount(username);
-        submitBtn.disabled = false;
+          const cloudAcc = await fetchCloudAccount(username);
 
-        if (users[username] || cloudAcc) {
-          errText.textContent = 'Username already exists.';
-          errBox.classList.remove('hidden');
-        } else {
-          users[username] = { username, password };
-          try {
-            localStorage.setItem(STORAGE_KEY_USERS, JSON.stringify(users));
-          } catch (e) {}
-          syncAccountToCloud(username, password);
-          completeLogin(username, remember);
+          if (username === DEMO_ACCOUNT.username || users[username] || cloudAcc) {
+            errText.textContent = 'Username already exists. Switch to Log In to access this account.';
+            errBox.classList.remove('hidden');
+          } else {
+            users[username] = { username, password };
+            try {
+              localStorage.setItem(STORAGE_KEY_USERS, JSON.stringify(users));
+            } catch (e) {}
+            syncAccountToCloud(username, password);
+            await completeLogin(username, remember);
+          }
         }
+      } finally {
+        submitBtn.disabled = false;
       }
+    }
+
+    function removeStuckLegacyAllocations() {
+      if (!Array.isArray(appState.savedAllocations)) {
+        appState.savedAllocations = [];
+        return false;
+      }
+      const beforeCount = appState.savedAllocations.length;
+      appState.savedAllocations = appState.savedAllocations.filter(s => {
+        const isStuckNov28 = s.id === '2026-11-23_2026-11-28' ||
+          (s.targetStartDate === '2026-11-23' && s.targetEndDate === '2026-11-28' && Number(s.baseIncome) === 2500);
+        return !isStuckNov28;
+      });
+      return appState.savedAllocations.length !== beforeCount;
     }
 
     async function completeLogin(username, remember = true) {
       hasCompletedInitialLoad = false;
+      hasUnsavedChanges = false;
       currentUser = username;
       appState = createDefaultAppState();
 
@@ -1757,13 +1856,15 @@ service cloud.firestore {
       document.getElementById('app-shell').classList.remove('hidden');
 
       await loadUserData(username);
+      const cleanedLegacy = removeStuckLegacyAllocations();
       hasCompletedInitialLoad = true;
 
-      if (!Array.isArray(appState.savedAllocations) || appState.savedAllocations.length === 0) {
-        autoSaveCurrentWeek(true);
-      } else {
-        loadWeekAllocationIfSaved(appState.targetStartDate, appState.targetEndDate, true);
+      if (cleanedLegacy) {
+        persistUserData(true);
       }
+
+      // Only load a week's snapshot if the user explicitly saved it previously
+      loadWeekAllocationIfSaved(appState.targetStartDate, appState.targetEndDate, true);
 
       recordAccountActivity('Account', `Logged in as ${username}`, true);
       refreshAllUI(true);
@@ -1777,6 +1878,7 @@ service cloud.firestore {
       }
       currentUser = null;
       hasCompletedInitialLoad = false;
+      hasUnsavedChanges = false;
       clearPersistentSession();
       document.getElementById('app-shell').classList.add('hidden');
       document.getElementById('auth-view').classList.remove('hidden');
@@ -1816,6 +1918,47 @@ service cloud.firestore {
       };
     }
 
+    async function loadUserData(username) {
+      let localParsed = null;
+      try {
+        const savedLocal = localStorage.getItem(getUserStorageKey(username));
+        if (savedLocal) localParsed = JSON.parse(savedLocal);
+      } catch (e) {}
+
+      if (localParsed) {
+        mergeLoadedUserState(localParsed);
+      }
+
+      if (firebaseReadyPromise) {
+        await Promise.race([
+          firebaseReadyPromise,
+          new Promise(resolve => setTimeout(() => resolve(false), 2500))
+        ]);
+      }
+
+      if (firestoreDB && !firestorePermissionDenied && window.__firebaseSDK) {
+        try {
+          const { doc, getDoc } = window.__firebaseSDK;
+          const snap = await getDoc(doc(firestoreDB, 'von_allocator_users', username));
+          if (snap.exists()) {
+            const cloudData = snap.data();
+            const cloudTs = Number(cloudData.updatedAt) || 0;
+            const localTs = Number(localParsed?.updatedAt) || 0;
+            if (!localParsed || cloudTs >= localTs) {
+              mergeLoadedUserState(cloudData);
+              try {
+                localStorage.setItem(getUserStorageKey(username), JSON.stringify(appState));
+              } catch (e) {}
+            }
+          }
+        } catch (err) {
+          if (err?.code === 'permission-denied') {
+            handleFirestorePermissionDenied();
+          }
+        }
+      }
+    }
+
     function recordAccountActivity(category, description, flushImmediately = false) {
       if (!currentUser || !hasCompletedInitialLoad || isRestoringWeekState) return;
       if (!Array.isArray(appState.activityLog)) appState.activityLog = [];
@@ -1844,7 +1987,6 @@ service cloud.firestore {
 
       renderActivityLog();
 
-      // Also append an immutable log document under the specific account in Firestore
       if (firestoreDB && !firestorePermissionDenied && window.__firebaseSDK && window.__firebaseSDK.collection && window.__firebaseSDK.addDoc) {
         try {
           const { collection, addDoc } = window.__firebaseSDK;
@@ -1888,44 +2030,6 @@ service cloud.firestore {
     }
 
     // ==================== CLOUD & LOCAL STORAGE PERSISTENCE ====================
-    async function loadUserData(username) {
-      let localParsed = null;
-      try {
-        const savedLocal = localStorage.getItem(getUserStorageKey(username));
-        if (savedLocal) localParsed = JSON.parse(savedLocal);
-      } catch (e) {}
-
-      if (localParsed) {
-        mergeLoadedUserState(localParsed);
-      }
-
-      if (firebaseReadyPromise) {
-        await firebaseReadyPromise;
-      }
-
-      if (firestoreDB && !firestorePermissionDenied && window.__firebaseSDK) {
-        try {
-          const { doc, getDoc } = window.__firebaseSDK;
-          const snap = await getDoc(doc(firestoreDB, 'von_allocator_users', username));
-          if (snap.exists()) {
-            const cloudData = snap.data();
-            const cloudTs = Number(cloudData.updatedAt) || 0;
-            const localTs = Number(localParsed?.updatedAt) || 0;
-            if (!localParsed || cloudTs >= localTs) {
-              mergeLoadedUserState(cloudData);
-              try {
-                localStorage.setItem(getUserStorageKey(username), JSON.stringify(appState));
-              } catch (e) {}
-            }
-          }
-        } catch (err) {
-          if (err?.code === 'permission-denied') {
-            handleFirestorePermissionDenied();
-          }
-        }
-      }
-    }
-
     function handleFirestorePermissionDenied() {
       firestorePermissionDenied = true;
       if (unsubscribeUserSnapshot) {
@@ -1938,7 +2042,6 @@ service cloud.firestore {
     function updateSyncStatusBadge(state, label) {
       const dot = document.getElementById('fb-status-dot');
       const txt = document.getElementById('fb-status-text');
-      const autoText = document.getElementById('autosave-status-text');
 
       if (dot) {
         dot.className = state === 'synced'
@@ -1948,9 +2051,6 @@ service cloud.firestore {
             : 'w-2 h-2 rounded-full bg-amber-400 shrink-0 ml-1';
       }
       if (txt) txt.textContent = label;
-      if (autoText) {
-        autoText.textContent = state === 'saving' ? 'Saving...' : 'Auto-Saved';
-      }
     }
 
     async function persistUserData(forceCloud = false) {
@@ -1964,7 +2064,10 @@ service cloud.firestore {
       } catch (e) {}
 
       if (firebaseReadyPromise) {
-        await firebaseReadyPromise;
+        await Promise.race([
+          firebaseReadyPromise,
+          new Promise(resolve => setTimeout(() => resolve(false), 2000))
+        ]);
       }
 
       if (firestoreDB && !firestorePermissionDenied && window.__firebaseSDK) {
@@ -2052,9 +2155,7 @@ service cloud.firestore {
             const auth = getAuth(app);
             try {
               await signInAnonymously(auth);
-            } catch (authErr) {
-              // Anonymous auth may be disabled in Firebase Console; continue with Firestore rules check
-            }
+            } catch (authErr) {}
             firestoreDB = getFirestore(app);
             updateSyncStatusBadge('synced', 'Cloud Ready');
             resolve(true);
@@ -2152,8 +2253,8 @@ service cloud.firestore {
       const titles = {
         allocation: ['Weekly Budget Allocation', 'Budget Allocation for Vhon • Debt-first priority weekly planner'],
         debts: ['Debts', 'Priority #1 settlement • SPaylater & SLoan sorted by due date'],
-        saved: ['Saved Allocations', 'Current & upcoming week allocations • High to low per bank'],
-        'old-weeks': ['Previous Old Weeks', 'Completed budget weeks archive • Automatically moved once week ends'],
+        saved: ['Saved Allocations', 'Current & upcoming saved weeks • High to low per bank'],
+        'old-weeks': ['Previous Old Weeks', 'Completed budget weeks archive • Saved weeks whose end date has passed'],
         setup: ['Setup Expenses & Banks', 'Customize fixed bills, variable percentages, assigned banks & activity log']
       };
       if (titles[page]) {
@@ -2240,11 +2341,10 @@ service cloud.firestore {
       appState.targetStartDate = toISODate(nextMon);
       appState.targetEndDate = toISODate(nextSun);
 
-      // Preserve the newly clicked Payday date while loading the target week's budget values
+      // Load saved week if one exists, otherwise keep current editor state ready to Save Allocation
       loadWeekAllocationIfSaved(appState.targetStartDate, appState.targetEndDate, true);
       syncLockedDebtsToAllocation(true);
       refreshAllUI(true);
-      recordAccountActivity('Calendar', `Selected payday ${formatShortDate(dateStr)} → target ${formatFullRange(appState.targetStartDate, appState.targetEndDate)}`, true);
     }
 
     function useSelectedDateWeekAsTarget() {
@@ -2257,13 +2357,9 @@ service cloud.firestore {
       appState.targetStartDate = toISODate(mon);
       appState.targetEndDate = toISODate(sun);
 
-      const wasAlreadySaved = loadWeekAllocationIfSaved(appState.targetStartDate, appState.targetEndDate, true);
+      loadWeekAllocationIfSaved(appState.targetStartDate, appState.targetEndDate, true);
       syncLockedDebtsToAllocation(true);
       refreshAllUI(true);
-      if (!wasAlreadySaved) {
-        autoSaveCurrentWeek(true);
-      }
-      recordAccountActivity('Calendar', `Set target budget week directly to ${formatFullRange(appState.targetStartDate, appState.targetEndDate)}`, true);
       showToast(`Target week set to ${formatFullRange(appState.targetStartDate, appState.targetEndDate)}`);
     }
 
@@ -2272,17 +2368,12 @@ service cloud.firestore {
       const d2 = parseISODate(endStr);
       const [s, e] = d1 <= d2 ? [d1, d2] : [d2, d1];
 
-      // Dragging directly sets the Custom Target Budget Week / Range
       appState.targetStartDate = toISODate(s);
       appState.targetEndDate = toISODate(e);
 
-      const wasAlreadySaved = loadWeekAllocationIfSaved(appState.targetStartDate, appState.targetEndDate, true);
+      loadWeekAllocationIfSaved(appState.targetStartDate, appState.targetEndDate, true);
       syncLockedDebtsToAllocation(true);
       refreshAllUI(true);
-      if (!wasAlreadySaved) {
-        autoSaveCurrentWeek(true);
-      }
-      recordAccountActivity('Calendar', `Dragged custom target budget week: ${formatFullRange(appState.targetStartDate, appState.targetEndDate)}`, true);
     }
 
     function jumpToTodayMonth() {
@@ -2304,14 +2395,7 @@ service cloud.firestore {
       if (todayBtnTxt) todayBtnTxt.textContent = `Today (${formatShortDate(todayISO)})`;
       if (miniTodayLbl) miniTodayLbl.textContent = todayFormatted;
 
-      const selPill = document.getElementById('cal-selected-date-pill');
-      const incRangeEl = document.getElementById('cal-income-range-text');
-      const tgtRangeEl = document.getElementById('cal-target-range-text');
       const headerTgtEl = document.getElementById('header-target-week');
-
-      if (selPill) selPill.textContent = formatShortDate(appState.selectedDate);
-      if (incRangeEl) incRangeEl.textContent = incTxt;
-      if (tgtRangeEl) tgtRangeEl.textContent = tgtTxt;
       if (headerTgtEl) headerTgtEl.textContent = tgtTxt;
 
       const miniInc = document.getElementById('mini-cal-income-range');
@@ -2325,9 +2409,7 @@ service cloud.firestore {
       clickedSun.setDate(clickedMon.getDate() + 6);
       const btnLabel = `Use ${formatShortDate(toISODate(clickedMon))}–${clickedSun.getDate()}`;
 
-      const mainThisWeekBtn = document.getElementById('cal-this-week-btn');
       const miniThisWeekBtn = document.getElementById('mini-cal-this-week-btn');
-      if (mainThisWeekBtn) mainThisWeekBtn.textContent = btnLabel;
       if (miniThisWeekBtn) miniThisWeekBtn.textContent = btnLabel;
     }
 
@@ -2517,6 +2599,249 @@ service cloud.firestore {
       }
     });
 
+    // ==================== MANUAL SAVE & REMOVE ALLOCATION FUNCTIONS ====================
+    function getActiveTargetWeekId() {
+      return `${appState.targetStartDate}_${appState.targetEndDate}`;
+    }
+
+    function findSavedAllocationForCurrentTarget() {
+      if (!Array.isArray(appState.savedAllocations)) return null;
+      const activeId = getActiveTargetWeekId();
+      return appState.savedAllocations.find(
+        s => s.id === activeId || (s.targetStartDate === appState.targetStartDate && s.targetEndDate === appState.targetEndDate)
+      ) || null;
+    }
+
+    function markAllocationDirty() {
+      if (isRestoringWeekState) return;
+      hasUnsavedChanges = true;
+      updateAllocationSaveControlsUI();
+    }
+
+    function updateAllocationSaveControlsUI() {
+      const existing = findSavedAllocationForCurrentTarget();
+      const isSaved = !!existing;
+
+      const headerPill = document.getElementById('allocation-save-status-pill');
+      const headerDot = document.getElementById('allocation-save-status-dot');
+      const headerTxt = document.getElementById('allocation-save-status-text');
+      const cardBadge = document.getElementById('week-saved-badge');
+
+      const headerRemoveBtn = document.getElementById('btn-remove-allocation');
+      const cardRemoveBtn = document.getElementById('card-btn-remove-allocation');
+
+      if (headerRemoveBtn) headerRemoveBtn.disabled = !isSaved;
+      if (cardRemoveBtn) cardRemoveBtn.disabled = !isSaved;
+
+      if (!isSaved) {
+        if (headerPill) headerPill.className = 'hidden md:flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-slate-500/15 border border-slate-500/30 text-slate-400 text-[11px] font-semibold';
+        if (headerDot) headerDot.className = 'w-1.5 h-1.5 rounded-full bg-slate-400';
+        if (headerTxt) headerTxt.textContent = 'Not Saved';
+        if (cardBadge) {
+          cardBadge.className = 'px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-500/15 text-slate-400';
+          cardBadge.textContent = 'Not Saved';
+        }
+      } else if (hasUnsavedChanges) {
+        if (headerPill) headerPill.className = 'hidden md:flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-amber-500/15 border border-amber-500/35 text-amber-400 text-[11px] font-semibold';
+        if (headerDot) headerDot.className = 'w-1.5 h-1.5 rounded-full bg-amber-400';
+        if (headerTxt) headerTxt.textContent = 'Unsaved Changes';
+        if (cardBadge) {
+          cardBadge.className = 'px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-500/15 text-amber-400';
+          cardBadge.textContent = 'Unsaved Changes';
+        }
+      } else {
+        if (headerPill) headerPill.className = 'hidden md:flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-[11px] font-semibold';
+        if (headerDot) headerDot.className = 'w-1.5 h-1.5 rounded-full bg-emerald-400';
+        if (headerTxt) headerTxt.textContent = 'Saved';
+        if (cardBadge) {
+          cardBadge.className = 'px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/15 text-emerald-400';
+          cardBadge.textContent = 'Saved';
+        }
+      }
+    }
+
+    function saveCurrentAllocation() {
+      const baseInc = Number(appState.baseIncomeValue) || 0;
+      const extraInc = Number(appState.extraIncomeValue) || 0;
+      const totalFixed = getTotalFixedWeekly();
+      const remainingBase = Math.max(0, Math.round((baseInc - totalFixed) * 100) / 100);
+
+      const targetMon = parseISODate(appState.targetStartDate);
+      const weekNum = getWeekNumber(targetMon);
+      const shortRange = `${formatShortDate(appState.targetStartDate)} - ${formatShortDate(appState.targetEndDate)}`;
+      const categories = appState.variableCategories || DEFAULT_VARIABLE_CATEGORIES;
+
+      const snapshot = {
+        id: getActiveTargetWeekId(),
+        weekBadge: `Week ${weekNum} (${shortRange})`,
+        incomeStartDate: appState.incomeStartDate,
+        incomeEndDate: appState.incomeEndDate,
+        targetStartDate: appState.targetStartDate,
+        targetEndDate: appState.targetEndDate,
+        incomeRange: formatFullRange(appState.incomeStartDate, appState.incomeEndDate),
+        targetRange: formatFullRange(appState.targetStartDate, appState.targetEndDate),
+        activeIncomePresets: JSON.parse(JSON.stringify(appState.activeIncomePresets || {})),
+        baseIncome: baseInc,
+        extraIncome: extraInc,
+        totalIncome: baseInc + extraInc,
+        totalFixed: totalFixed,
+        debtBank: appState.debtBank || 'ShopeePay',
+        spaylaterWeekly: Number(appState.spaylaterWeekly) || 0,
+        sloanWeekly: Number(appState.sloanWeekly) || 0,
+        spaylaterLocked: true,
+        sloanLocked: true,
+        fixedItems: JSON.parse(JSON.stringify(appState.fixedItems)),
+        variableBreakdown: categories.map(cat => ({
+          ...cat,
+          baseAmt: (remainingBase * (Number(cat.pct) || 0)) / 100,
+          extraAmt: (extraInc * (Number(cat.pct) || 0)) / 100,
+          totalAmt: ((remainingBase + extraInc) * (Number(cat.pct) || 0)) / 100
+        })),
+        updatedAt: Date.now()
+      };
+
+      if (!Array.isArray(appState.savedAllocations)) {
+        appState.savedAllocations = [];
+      }
+
+      const idx = appState.savedAllocations.findIndex(
+        s => s.id === snapshot.id || (s.targetStartDate === snapshot.targetStartDate && s.targetEndDate === snapshot.targetEndDate)
+      );
+      if (idx >= 0) {
+        appState.savedAllocations[idx] = snapshot;
+      } else {
+        appState.savedAllocations.unshift(snapshot);
+      }
+
+      appState.savedAllocations.sort((a, b) => (b.targetStartDate || '').localeCompare(a.targetStartDate || ''));
+      hasUnsavedChanges = false;
+
+      renderSavedWeeksQuickBar();
+      updateAllocationSaveControlsUI();
+      renderSavedPage();
+      renderOldWeeksPage();
+      recordAccountActivity('Allocation', `Saved allocation: ${snapshot.weekBadge} (${formatPHP(snapshot.totalIncome)})`, true);
+      showToast(`Saved ${snapshot.weekBadge}!`);
+    }
+
+    function removeAllocationById(snapId) {
+      if (!Array.isArray(appState.savedAllocations)) return;
+      const target = appState.savedAllocations.find(s => s.id === snapId);
+      if (!target) {
+        showToast('Allocation not found or already removed.');
+        return;
+      }
+
+      appState.savedAllocations = appState.savedAllocations.filter(s => s.id !== snapId);
+      if (snapId === getActiveTargetWeekId()) {
+        hasUnsavedChanges = false;
+      }
+
+      renderSavedWeeksQuickBar();
+      updateAllocationSaveControlsUI();
+      renderSavedPage();
+      renderOldWeeksPage();
+      recordAccountActivity('Allocation', `Removed saved allocation: ${target.weekBadge}`, true);
+      showToast(`Removed ${target.weekBadge}`);
+    }
+
+    function removeCurrentAllocation() {
+      const existing = findSavedAllocationForCurrentTarget();
+      if (!existing) {
+        showToast('Current target week is not saved yet.');
+        return;
+      }
+      removeAllocationById(existing.id);
+    }
+
+    function removeSavedCurrentWeek() {
+      if (!activeSavedCurrentSnapId) return;
+      removeAllocationById(activeSavedCurrentSnapId);
+    }
+
+    function applySnapshotToAllocation(snap, preserveSelectedDates = false) {
+      if (!snap) return;
+      isRestoringWeekState = true;
+      try {
+        if (!preserveSelectedDates) {
+          if (snap.targetStartDate && snap.targetEndDate) {
+            appState.targetStartDate = snap.targetStartDate;
+            appState.targetEndDate = snap.targetEndDate;
+          }
+          if (snap.incomeStartDate && snap.incomeEndDate) {
+            appState.incomeStartDate = snap.incomeStartDate;
+            appState.incomeEndDate = snap.incomeEndDate;
+            appState.selectedDate = snap.incomeEndDate;
+          }
+        }
+        if (snap.activeIncomePresets) {
+          appState.activeIncomePresets = JSON.parse(JSON.stringify(snap.activeIncomePresets));
+        }
+        appState.baseIncomeValue = Number(snap.baseIncome) || 0;
+        appState.baseIncomeExpr = String(appState.baseIncomeValue);
+        appState.extraIncomeValue = Number(snap.extraIncome) || 0;
+        appState.extraIncomeExpr = appState.extraIncomeValue > 0 ? String(appState.extraIncomeValue) : '';
+
+        const currentMasterFixed = Array.isArray(appState.fixedItems) ? appState.fixedItems : [];
+        const snapFixedList = Array.isArray(snap.fixedItems) ? snap.fixedItems : [];
+
+        if (currentMasterFixed.length > 0) {
+          appState.fixedItems = currentMasterFixed.map(masterItem => {
+            const matchedSnap = snapFixedList.find(
+              sf => sf.id === masterItem.id || (sf.name || '').trim().toLowerCase() === (masterItem.name || '').trim().toLowerCase()
+            );
+            if (masterItem.locked || (matchedSnap && matchedSnap.locked)) {
+              const source = masterItem.locked ? masterItem : matchedSnap;
+              return {
+                ...masterItem,
+                weeklyAmount: Number(source.weeklyAmount) || 0,
+                enabled: source.enabled !== false,
+                locked: true
+              };
+            }
+            if (matchedSnap) {
+              return {
+                ...matchedSnap,
+                id: masterItem.id,
+                name: masterItem.name,
+                bank: masterItem.bank,
+                cycleLabel: masterItem.cycleLabel,
+                locked: false
+              };
+            }
+            return { ...masterItem };
+          });
+        } else if (snapFixedList.length > 0) {
+          appState.fixedItems = snapFixedList.map(item => ({ ...item }));
+        }
+
+        appState.spaylaterWeekly = Number(snap.spaylaterWeekly) || 0;
+        appState.spaylaterLocked = true;
+        appState.sloanWeekly = Number(snap.sloanWeekly) || 0;
+        appState.sloanLocked = true;
+        hasUnsavedChanges = false;
+      } finally {
+        isRestoringWeekState = false;
+      }
+    }
+
+    function loadWeekAllocationIfSaved(targetStart, targetEnd, preserveSelectedDates = false) {
+      if (!targetStart || !targetEnd || !Array.isArray(appState.savedAllocations)) {
+        hasUnsavedChanges = false;
+        return false;
+      }
+      const weekId = `${targetStart}_${targetEnd}`;
+      const existingSnap = appState.savedAllocations.find(
+        s => s.id === weekId || (s.targetStartDate === targetStart && s.targetEndDate === targetEnd)
+      );
+      if (existingSnap) {
+        applySnapshotToAllocation(existingSnap, preserveSelectedDates);
+        return true;
+      }
+      hasUnsavedChanges = false;
+      return false;
+    }
+
     // ==================== BASE WEEKLY INCOME PRESETS & SAVED WEEKS BAR ====================
     function renderIncomePresetButtons() {
       const container = document.getElementById('income-preset-buttons');
@@ -2558,8 +2883,7 @@ service cloud.firestore {
 
       renderIncomePresetButtons();
       recalculateBudget();
-      autoSaveCurrentWeek(true);
-      recordAccountActivity('Allocation', `${!wasActive ? 'Enabled' : 'Disabled'} ${preset.label} (Base: ${formatPHP(appState.baseIncomeValue)})`);
+      markAllocationDirty();
     }
 
     function handleBaseIncomeBoxInput() {
@@ -2567,43 +2891,49 @@ service cloud.firestore {
       appState.baseIncomeExpr = raw;
       appState.baseIncomeValue = evaluateMathExpr(raw);
       recalculateBudget();
-      autoSaveCurrentWeek(true);
+      markAllocationDirty();
     }
 
     function finalizeBaseIncomeBox() {
       appState.baseIncomeExpr = String(appState.baseIncomeValue);
       document.getElementById('base-income-box').value = appState.baseIncomeValue;
       recalculateBudget();
-      autoSaveCurrentWeek(true);
-      recordAccountActivity('Allocation', `Updated Base Weekly Income to ${formatPHP(appState.baseIncomeValue)}`);
+      markAllocationDirty();
     }
 
     function renderSavedWeeksQuickBar() {
       const bar = document.getElementById('allocation-saved-weeks-bar');
       if (!bar) return;
 
-      const activeId = `${appState.targetStartDate}_${appState.targetEndDate}`;
-      // Hide finished/past weeks once their week has ended
+      const activeId = getActiveTargetWeekId();
       const activeAndUpcomingList = (Array.isArray(appState.savedAllocations) ? appState.savedAllocations : [])
         .filter(snap => !isWeekFinished(snap))
         .sort((a, b) => (a.targetStartDate || '').localeCompare(b.targetStartDate || ''));
 
       if (activeAndUpcomingList.length === 0) {
-        bar.innerHTML = `<span class="text-[11px] opacity-60">Current & upcoming weeks auto-save here.</span>`;
+        bar.innerHTML = `<span class="text-[11px] opacity-60">No saved weeks yet. Click <strong>Save Allocation</strong> to store a week.</span>`;
         return;
       }
 
-      bar.innerHTML = activeAndUpcomingList.slice(0, 6).map(snap => {
-        const isCurrent = snap.id === activeId;
+      bar.innerHTML = activeAndUpcomingList.slice(0, 8).map(snap => {
+        const isCurrent = snap.id === activeId || (snap.targetStartDate === appState.targetStartDate && snap.targetEndDate === appState.targetEndDate);
+        const safeId = snap.id.replace(/'/g, "\\'");
         return `
-          <button type="button" onclick="selectSavedWeekFromBar('${snap.id}')"
-            class="px-2.5 py-1 rounded-lg text-[11px] font-semibold transition cursor-pointer ${
-              isCurrent
-                ? 'bg-blue-600 text-white shadow-xs'
-                : 'app-subcard hover:border-blue-500/40'
-            }">
-            ${snap.weekBadge} &bull; ${formatCompactPHP(snap.baseIncome)}
-          </button>
+          <div class="inline-flex items-center rounded-lg overflow-hidden border transition ${
+            isCurrent
+              ? 'bg-blue-600 text-white border-blue-500 shadow-xs'
+              : 'app-subcard border-transparent hover:border-blue-500/40'
+          }">
+            <button type="button" onclick="selectSavedWeekFromBar('${safeId}')"
+              class="px-2.5 py-1 text-[11px] font-semibold cursor-pointer">
+              ${snap.weekBadge} &bull; ${formatCompactPHP(snap.baseIncome)}
+            </button>
+            <button type="button" onclick="event.stopPropagation(); removeAllocationById('${safeId}')"
+              title="Remove ${snap.weekBadge}"
+              class="px-1.5 py-1 text-[11px] font-bold opacity-75 hover:opacity-100 hover:bg-rose-500/25 hover:text-rose-200 transition cursor-pointer">
+              &times;
+            </button>
+          </div>
         `;
       }).join('');
     }
@@ -2622,7 +2952,7 @@ service cloud.firestore {
       appState.extraIncomeExpr = expr;
       appState.extraIncomeValue = evaluateMathExpr(expr);
       recalculateBudget();
-      autoSaveCurrentWeek(true);
+      markAllocationDirty();
     }
 
     function finalizeExtraIncomeInput() {
@@ -2631,8 +2961,7 @@ service cloud.firestore {
         document.getElementById('extra-income-input').value = appState.extraIncomeValue;
       }
       recalculateBudget();
-      autoSaveCurrentWeek(true);
-      recordAccountActivity('Allocation', `Updated Extra Income to ${formatPHP(appState.extraIncomeValue)}`);
+      markAllocationDirty();
     }
 
     // ==================== FIXED WEEKLY EXPENSES & ALWAYS-LOCKED DEBT ROWS ====================
@@ -2676,17 +3005,12 @@ service cloud.firestore {
         item.enabled = !item.enabled;
         renderFixedExpensesList();
         recalculateBudget();
-        autoSaveCurrentWeek(true);
-        syncLockedExpensesAcrossAllWeeks();
-        renderSavedPage();
-        renderSetupPage();
-        recordAccountActivity('Allocation', `${item.enabled ? 'Enabled' : 'Disabled'} fixed expense: ${item.name}`, true);
+        markAllocationDirty();
         if (window.lucide) lucide.createIcons();
       }
     }
 
     function updateDebtRowLockUI() {
-      // Debts are always locked on Allocation and strictly synced with the Debts page
       appState.spaylaterLocked = true;
       appState.sloanLocked = true;
       const spayInput = document.getElementById('fixed-spaylater');
@@ -2749,18 +3073,6 @@ service cloud.firestore {
       }
     }
 
-    function updateFixedItemAmount(id, valStr) {
-      const item = appState.fixedItems.find(x => x.id === id);
-      if (item && !item.locked) {
-        item.weeklyAmount = evaluateMathExpr(valStr);
-        renderFixedExpensesList();
-        recalculateBudget();
-        autoSaveCurrentWeek(true);
-        recordAccountActivity('Allocation', `Updated ${item.name} to ${formatPHP(item.weeklyAmount)}/wk`);
-        if (window.lucide) lucide.createIcons();
-      }
-    }
-
     function getTotalDebtsWeekly() {
       return Math.round(((Number(appState.spaylaterWeekly) || 0) + (Number(appState.sloanWeekly) || 0)) * 100) / 100;
     }
@@ -2777,7 +3089,7 @@ service cloud.firestore {
       return Math.round((getTotalDebtsWeekly() + getTotalRecurringFixedWeekly()) * 100) / 100;
     }
 
-    // ==================== RECALCULATE & AUTO-SAVE BUDGET ====================
+    // ==================== RECALCULATE BUDGET ====================
     function recalculateBudget() {
       const baseInc = Number(appState.baseIncomeValue) || 0;
       const extraInc = Number(appState.extraIncomeValue) || 0;
@@ -2883,160 +3195,6 @@ service cloud.firestore {
       }).join('');
     }
 
-    // ==================== AUTO-SAVE SNAPSHOT & WEEK REFLECTION ====================
-    function autoSaveCurrentWeek(silent = true) {
-      if (isRestoringWeekState) return;
-
-      const baseInc = Number(appState.baseIncomeValue) || 0;
-      const extraInc = Number(appState.extraIncomeValue) || 0;
-      const totalFixed = getTotalFixedWeekly();
-      const remainingBase = Math.max(0, Math.round((baseInc - totalFixed) * 100) / 100);
-
-      const targetMon = parseISODate(appState.targetStartDate);
-      const weekNum = getWeekNumber(targetMon);
-      const shortRange = `${formatShortDate(appState.targetStartDate)} - ${formatShortDate(appState.targetEndDate)}`;
-      const categories = appState.variableCategories || DEFAULT_VARIABLE_CATEGORIES;
-
-      const snapshot = {
-        id: `${appState.targetStartDate}_${appState.targetEndDate}`,
-        weekBadge: `Week ${weekNum} (${shortRange})`,
-        incomeStartDate: appState.incomeStartDate,
-        incomeEndDate: appState.incomeEndDate,
-        targetStartDate: appState.targetStartDate,
-        targetEndDate: appState.targetEndDate,
-        incomeRange: formatFullRange(appState.incomeStartDate, appState.incomeEndDate),
-        targetRange: formatFullRange(appState.targetStartDate, appState.targetEndDate),
-        activeIncomePresets: JSON.parse(JSON.stringify(appState.activeIncomePresets || {})),
-        baseIncome: baseInc,
-        extraIncome: extraInc,
-        totalIncome: baseInc + extraInc,
-        totalFixed: totalFixed,
-        debtBank: appState.debtBank || 'ShopeePay',
-        spaylaterWeekly: Number(appState.spaylaterWeekly) || 0,
-        sloanWeekly: Number(appState.sloanWeekly) || 0,
-        spaylaterLocked: !!appState.spaylaterLocked,
-        sloanLocked: !!appState.sloanLocked,
-        fixedItems: JSON.parse(JSON.stringify(appState.fixedItems)),
-        variableBreakdown: categories.map(cat => ({
-          ...cat,
-          baseAmt: (remainingBase * (Number(cat.pct) || 0)) / 100,
-          extraAmt: (extraInc * (Number(cat.pct) || 0)) / 100,
-          totalAmt: ((remainingBase + extraInc) * (Number(cat.pct) || 0)) / 100
-        })),
-        updatedAt: Date.now()
-      };
-
-      const idx = appState.savedAllocations.findIndex(s => s.id === snapshot.id);
-      if (idx >= 0) {
-        appState.savedAllocations[idx] = snapshot;
-      } else {
-        appState.savedAllocations.unshift(snapshot);
-      }
-
-      appState.savedAllocations.sort((a, b) => (b.targetStartDate || '').localeCompare(a.targetStartDate || ''));
-
-      renderSavedWeeksQuickBar();
-      scheduleCloudSave();
-      if (!silent) {
-        showToast(`Auto-saved ${snapshot.weekBadge}!`);
-      }
-    }
-
-    function applySnapshotToAllocation(snap, preserveSelectedDates = false) {
-      if (!snap) return;
-      isRestoringWeekState = true;
-      try {
-        if (!preserveSelectedDates) {
-          if (snap.targetStartDate && snap.targetEndDate) {
-            appState.targetStartDate = snap.targetStartDate;
-            appState.targetEndDate = snap.targetEndDate;
-          }
-          if (snap.incomeStartDate && snap.incomeEndDate) {
-            appState.incomeStartDate = snap.incomeStartDate;
-            appState.incomeEndDate = snap.incomeEndDate;
-            appState.selectedDate = snap.incomeEndDate;
-          }
-        }
-        if (snap.activeIncomePresets) {
-          appState.activeIncomePresets = JSON.parse(JSON.stringify(snap.activeIncomePresets));
-        }
-        appState.baseIncomeValue = Number(snap.baseIncome) || 0;
-        appState.baseIncomeExpr = String(appState.baseIncomeValue);
-        appState.extraIncomeValue = Number(snap.extraIncome) || 0;
-        appState.extraIncomeExpr = appState.extraIncomeValue > 0 ? String(appState.extraIncomeValue) : '';
-
-        const currentMasterFixed = Array.isArray(appState.fixedItems) ? appState.fixedItems : [];
-        const snapFixedList = Array.isArray(snap.fixedItems) ? snap.fixedItems : [];
-
-        if (currentMasterFixed.length > 0) {
-          appState.fixedItems = currentMasterFixed.map(masterItem => {
-            const matchedSnap = snapFixedList.find(
-              sf => sf.id === masterItem.id || (sf.name || '').trim().toLowerCase() === (masterItem.name || '').trim().toLowerCase()
-            );
-            // If locked in master or snapshot, keep locked status & locked amount synced across weeks
-            if (masterItem.locked || (matchedSnap && matchedSnap.locked)) {
-              const source = masterItem.locked ? masterItem : matchedSnap;
-              return {
-                ...masterItem,
-                weeklyAmount: Number(source.weeklyAmount) || 0,
-                enabled: source.enabled !== false,
-                locked: true
-              };
-            }
-            if (matchedSnap) {
-              return {
-                ...matchedSnap,
-                id: masterItem.id,
-                name: masterItem.name,
-                bank: masterItem.bank,
-                cycleLabel: masterItem.cycleLabel,
-                locked: false
-              };
-            }
-            return { ...masterItem };
-          });
-        } else if (snapFixedList.length > 0) {
-          appState.fixedItems = snapFixedList.map(item => ({ ...item }));
-        }
-
-        if (appState.spaylaterLocked || snap.spaylaterLocked) {
-          appState.spaylaterWeekly = appState.spaylaterLocked
-            ? Number(appState.spaylaterWeekly) || 0
-            : Number(snap.spaylaterWeekly) || 0;
-          appState.spaylaterLocked = true;
-        } else {
-          appState.spaylaterWeekly = Number(snap.spaylaterWeekly) || 0;
-          appState.spaylaterLocked = false;
-        }
-
-        if (appState.sloanLocked || snap.sloanLocked) {
-          appState.sloanWeekly = appState.sloanLocked
-            ? Number(appState.sloanWeekly) || 0
-            : Number(snap.sloanWeekly) || 0;
-          appState.sloanLocked = true;
-        } else {
-          appState.sloanWeekly = Number(snap.sloanWeekly) || 0;
-          appState.sloanLocked = false;
-        }
-      } finally {
-        isRestoringWeekState = false;
-      }
-    }
-
-    function loadWeekAllocationIfSaved(targetStart, targetEnd, preserveSelectedDates = false) {
-      if (!targetStart || !targetEnd || !Array.isArray(appState.savedAllocations)) return false;
-      const weekId = `${targetStart}_${targetEnd}`;
-      const existingSnap = appState.savedAllocations.find(s => s.id === weekId);
-      if (existingSnap) {
-        applySnapshotToAllocation(existingSnap, preserveSelectedDates);
-        return true;
-      }
-      // Reset extra income for a fresh week while keeping base presets ready
-      appState.extraIncomeValue = 0;
-      appState.extraIncomeExpr = '';
-      return false;
-    }
-
     // ==================== PAGE 2: DEBTS HELPERS ====================
     function getActivePlanningCutoffDate() {
       return appState.targetEndDate >= appState.selectedDate
@@ -3133,7 +3291,7 @@ service cloud.firestore {
 
       syncLockedDebtsToAllocation(true);
       recalculateBudget();
-      autoSaveCurrentWeek(true);
+      if (findSavedAllocationForCurrentTarget()) markAllocationDirty();
       renderDebtsPage();
       recordAccountActivity('Debts', `Added ${provider} (${label}): ${formatCompactPHP(totalBill)} due ${formatShortDate(dueDate)}`, true);
 
@@ -3163,7 +3321,7 @@ service cloud.firestore {
 
       syncLockedDebtsToAllocation(true);
       recalculateBudget();
-      autoSaveCurrentWeek(true);
+      scheduleCloudSave();
       renderDebtsPage(id);
     }
 
@@ -3248,7 +3406,6 @@ service cloud.firestore {
 
       return `
         <div class="app-subcard rounded-xl overflow-hidden border ${inRange ? 'border-transparent' : 'border-blue-500/25'}">
-          <!-- Collapsed Compact Summary Header -->
           <div onclick="toggleStagedDebtAccordion('${debt.id}')"
             class="px-3 py-2.5 flex items-center justify-between gap-2 cursor-pointer hover:bg-slate-500/5 transition">
             <div class="flex items-center gap-2 min-w-0">
@@ -3275,7 +3432,6 @@ service cloud.firestore {
             </div>
           </div>
 
-          <!-- Expandable Inline Edit Body (Collapsed by default) -->
           <div id="staged-body-${debt.id}" class="accordion-content ${isExpanded ? 'open' : ''}">
             <div class="accordion-inner">
               <div class="px-3 pb-3 pt-2 border-t app-divider space-y-2.5">
@@ -3418,7 +3574,7 @@ service cloud.firestore {
       appState.debts = appState.debts.filter(d => d.id !== id);
       syncLockedDebtsToAllocation(true);
       recalculateBudget();
-      autoSaveCurrentWeek(true);
+      if (findSavedAllocationForCurrentTarget()) markAllocationDirty();
       renderDebtsPage();
       if (target) recordAccountActivity('Debts', `Removed ${target.provider} (${target.label || 'Bill'})`, true);
     }
@@ -3435,7 +3591,7 @@ service cloud.firestore {
       d.locked = !d.locked;
       syncLockedDebtsToAllocation(true);
       recalculateBudget();
-      autoSaveCurrentWeek(true);
+      if (findSavedAllocationForCurrentTarget()) markAllocationDirty();
       renderDebtsPage();
       recordAccountActivity('Debts', `${d.locked ? 'Locked' : 'Unlocked'} ${d.provider} (${d.label || 'Bill'})`, true);
       showToast(d.locked ? `${d.provider} locked & synced to Allocation!` : `${d.provider} moved to staged.`);
@@ -3448,320 +3604,11 @@ service cloud.firestore {
         if (d.paid) d.locked = false;
         syncLockedDebtsToAllocation(true);
         recalculateBudget();
-        autoSaveCurrentWeek(true);
+        if (findSavedAllocationForCurrentTarget()) markAllocationDirty();
         renderDebtsPage();
         recordAccountActivity('Debts', `${d.paid ? 'Marked paid' : 'Reopened'} ${d.provider} (${d.label || 'Bill'})`, true);
         showToast(d.paid ? `${d.provider} marked as paid!` : `${d.provider} reopened.`);
       }
-    }
-
-    // ==================== PAGE 3: SAVED (1/2 CURRENT WEEK | 1/2 UPCOMING WEEKS COLLAPSED DROPDOWNS) ====================
-    function buildBankBreakdownForSnapshot(snap) {
-      const configuredBanks = appState.banks || DEFAULT_BANKS;
-      const configuredBankNames = configuredBanks.map(b => b.name);
-      const bankMap = {};
-      configuredBankNames.forEach(b => { bankMap[b] = []; });
-
-      const setupFixedList = appState.fixedItems || [];
-      const setupVarList = appState.variableCategories || [];
-      const latestDebtBank = appState.debtBank || snap.debtBank || 'ShopeePay';
-
-      // 1. Recurring Fixed Items (always resolve bank dynamically from latest Setup)
-      (snap.fixedItems || []).filter(it => it.enabled !== false).forEach(item => {
-        const matchedSetup = setupFixedList.find(
-          sf => sf.id === item.id || sf.name.toLowerCase() === (item.name || '').toLowerCase()
-        );
-        const resolvedBank = (matchedSetup && matchedSetup.bank) || item.bank || configuredBankNames[0] || 'MariBank';
-        const resolvedName = (matchedSetup && matchedSetup.name) || item.name;
-        if (!bankMap[resolvedBank]) bankMap[resolvedBank] = [];
-        bankMap[resolvedBank].push({
-          label: resolvedName,
-          amount: Number(item.weeklyAmount) || 0
-        });
-      });
-
-      // 2. Priority #1 Debts (always resolve to latest Debt Bank from Setup)
-      if (!bankMap[latestDebtBank]) bankMap[latestDebtBank] = [];
-      if (Number(snap.spaylaterWeekly) > 0) {
-        bankMap[latestDebtBank].push({ label: 'SPaylater (Priority #1)', amount: Number(snap.spaylaterWeekly) || 0 });
-      }
-      if (Number(snap.sloanWeekly) > 0) {
-        bankMap[latestDebtBank].push({ label: 'SLoan (Priority #1)', amount: Number(snap.sloanWeekly) || 0 });
-      }
-
-      // 3. Variable Breakdown (always resolve bank dynamically from latest Setup)
-      (snap.variableBreakdown || []).forEach(v => {
-        const matchedCat = setupVarList.find(
-          vc => vc.id === v.id || vc.name.toLowerCase() === (v.name || '').toLowerCase()
-        );
-        const resolvedBank = (matchedCat && matchedCat.bank) || v.bank || configuredBankNames[0] || 'MariBank';
-        const resolvedName = (matchedCat && matchedCat.name) || v.name;
-        if (!bankMap[resolvedBank]) bankMap[resolvedBank] = [];
-
-        if (Number(v.baseAmt) > 0 || Number(v.extraAmt) === 0) {
-          bankMap[resolvedBank].push({ label: `${resolvedName} (Base)`, amount: Number(v.baseAmt) || 0 });
-        }
-        if (Number(v.extraAmt) > 0) {
-          bankMap[resolvedBank].push({ label: `${resolvedName} (Extra)`, amount: Number(v.extraAmt) || 0 });
-        }
-      });
-
-      const entries = Object.entries(bankMap).filter(([, items]) => items.length > 0);
-      let grandTotal = 0;
-      entries.forEach(([, items]) => {
-        grandTotal += items.reduce((s, it) => s + (Number(it.amount) || 0), 0);
-      });
-
-      return {
-        entries,
-        grandTotal: Math.round(grandTotal * 100) / 100
-      };
-    }
-
-    function renderBankCardItemHTML(snapId, bankName, items, isCurrentWeek = true) {
-      const bankTotal = items.reduce((s, it) => s + (Number(it.amount) || 0), 0);
-      const checkKey = `${snapId}_${bankName}`;
-      const isChecked = !!(appState.transferredChecklist && appState.transferredChecklist[checkKey]);
-      const safeBankArg = bankName.replace(/'/g, "\\'");
-      const expandedClass = isCurrentWeek && currentWeekBanksExpanded ? 'open' : '';
-      const chevronRotate = isCurrentWeek && currentWeekBanksExpanded ? 'rotate-180' : '';
-
-      return `
-        <div class="${isCurrentWeek ? 'app-subcard' : 'app-card'} rounded-xl overflow-hidden border transition ${isChecked ? 'border-emerald-500/40 opacity-75' : 'border-transparent hover:border-blue-500/35'}">
-          <div onclick="toggleBankCardAccordion(this)" class="p-3.5 flex items-center justify-between gap-3 cursor-pointer">
-            <div class="flex items-center gap-3 min-w-0">
-              <input type="checkbox" ${isChecked ? 'checked' : ''}
-                onclick="event.stopPropagation(); toggleBankTransferCheck('${snapId}', '${safeBankArg}')"
-                title="Mark ${bankName} transfer complete"
-                class="aesthetic-checkbox" />
-              <div class="min-w-0">
-                <span class="inline-block px-2.5 py-0.5 rounded-md text-xs font-bold ${getBankPillClass(bankName)} ${isChecked ? 'line-through opacity-75' : ''}">
-                  ${bankName}
-                </span>
-                <span class="ml-2 text-[11px]" style="color: var(--text-secondary)">
-                  ${items.length} item${items.length === 1 ? '' : 's'}
-                </span>
-              </div>
-            </div>
-
-            <div class="flex items-center gap-2 shrink-0">
-              <span class="text-sm font-extrabold mono-num ${isChecked ? 'text-emerald-400 line-through' : ''}">
-                ${formatPHP(bankTotal)}
-              </span>
-              <i data-lucide="chevron-down" class="bank-chevron w-4 h-4 text-slate-400 transition-transform duration-200 ${chevronRotate}"></i>
-            </div>
-          </div>
-
-          <div class="bank-accordion accordion-content ${expandedClass}">
-            <div class="accordion-inner">
-              <div class="px-3.5 pb-3.5 pt-2 border-t app-divider space-y-1.5">
-                ${items.map(it => `
-                  <div class="flex items-center justify-between gap-2 text-xs">
-                    <span class="truncate" style="color: var(--text-secondary)">${it.label}</span>
-                    <span class="font-bold mono-num shrink-0">${formatPHP(it.amount)}</span>
-                  </div>
-                `).join('')}
-              </div>
-            </div>
-          </div>
-        </div>
-      `;
-    }
-
-    function renderCollapsibleWeekDropdownHTML(snap, isExpanded = false) {
-      const { entries, grandTotal } = buildBankBreakdownForSnapshot(snap);
-      const safeSnapId = snap.id.replace(/'/g, "\\'");
-
-      return `
-        <div class="app-subcard rounded-2xl overflow-hidden border border-transparent hover:border-blue-500/35 transition">
-          <!-- Collapsed Week Dropdown Header -->
-          <div onclick="toggleSavedWeekDropdown('${safeSnapId}')"
-            class="p-3.5 flex items-center justify-between gap-3 cursor-pointer">
-            <div class="flex items-center gap-2.5 min-w-0">
-              <span class="px-2.5 py-1 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-xs font-bold shrink-0">
-                ${snap.weekBadge}
-              </span>
-              <span class="text-[11px] truncate hidden sm:inline" style="color: var(--text-secondary)">
-                ${entries.length} bank${entries.length === 1 ? '' : 's'}
-              </span>
-            </div>
-
-            <div class="flex items-center gap-2 shrink-0">
-              <span class="text-sm font-extrabold text-emerald-400 mono-num">
-                ${formatPHP(grandTotal)}
-              </span>
-              <i id="week-drop-chev-${snap.id}" data-lucide="chevron-down"
-                class="upcoming-week-chevron w-4 h-4 text-slate-400 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}"></i>
-            </div>
-          </div>
-
-          <!-- Expandable Week Dropdown Body -->
-          <div id="week-drop-body-${snap.id}" class="upcoming-week-accordion accordion-content ${isExpanded ? 'open' : ''}">
-            <div class="accordion-inner">
-              <div class="px-3.5 pb-3.5 pt-2.5 border-t app-divider space-y-2.5">
-                <div class="flex items-center justify-between gap-2 text-[11px]">
-                  <span style="color: var(--text-secondary)">
-                    Target Range: <strong>${snap.targetRange || snap.weekBadge}</strong>
-                  </span>
-                  <button type="button" onclick="event.stopPropagation(); loadSavedWeekById('${safeSnapId}')"
-                    class="px-2.5 py-1 rounded-lg bg-blue-600/15 hover:bg-blue-600/25 text-blue-400 border border-blue-500/30 text-[11px] font-semibold transition flex items-center gap-1">
-                    <i data-lucide="arrow-up-right" class="w-3 h-3"></i>
-                    <span>Load in Allocation</span>
-                  </button>
-                </div>
-
-                <div class="space-y-2">
-                  ${entries.length > 0
-                    ? entries.map(([bankName, items]) => renderBankCardItemHTML(snap.id, bankName, items, false)).join('')
-                    : `<div class="text-xs text-center py-4 opacity-60">No allocations recorded for this week.</div>`}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      `;
-    }
-
-    function renderSavedPage() {
-      const currentCardsEl = document.getElementById('saved-current-bank-cards');
-      const upcomingListEl = document.getElementById('saved-upcoming-weeks-list');
-      if (!currentCardsEl || !upcomingListEl) return;
-
-      if (appState.savedAllocations.length === 0) {
-        autoSaveCurrentWeek(true);
-      }
-
-      const activeWeekId = `${appState.targetStartDate}_${appState.targetEndDate}`;
-      let currentSnap = appState.savedAllocations.find(s => s.id === activeWeekId);
-      if (!currentSnap) {
-        autoSaveCurrentWeek(true);
-        currentSnap = appState.savedAllocations.find(s => s.id === activeWeekId) || appState.savedAllocations[0];
-      }
-
-      // Render Left Panel (1/2): Current Week
-      if (currentSnap) {
-        const badgeEl = document.getElementById('saved-current-week-badge');
-        const rangeEl = document.getElementById('saved-current-week-range');
-        const totalEl = document.getElementById('saved-current-grand-total');
-        if (badgeEl) badgeEl.textContent = currentSnap.weekBadge;
-        if (rangeEl) rangeEl.textContent = currentSnap.targetRange || formatFullRange(currentSnap.targetStartDate, currentSnap.targetEndDate);
-
-        const { entries, grandTotal } = buildBankBreakdownForSnapshot(currentSnap);
-        if (totalEl) totalEl.textContent = formatPHP(grandTotal);
-
-        currentCardsEl.innerHTML = entries.length > 0
-          ? entries.map(([bankName, items]) => renderBankCardItemHTML(currentSnap.id, bankName, items, true)).join('')
-          : `<div class="text-center py-8 text-xs opacity-60">No allocations recorded for the current week yet.</div>`;
-      }
-
-      // Partition other saved weeks into Upcoming Weeks (> current targetStartDate) and Earlier Weeks (< current targetStartDate)
-      const curStart = currentSnap?.targetStartDate || appState.targetStartDate;
-      const upcomingWeeks = appState.savedAllocations
-        .filter(s => s.id !== currentSnap?.id && (s.targetStartDate || '') > curStart)
-        .sort((a, b) => (a.targetStartDate || '').localeCompare(b.targetStartDate || ''));
-
-      const pastWeeks = appState.savedAllocations
-        .filter(s => s.id !== currentSnap?.id && (s.targetStartDate || '') < curStart)
-        .sort((a, b) => (b.targetStartDate || '').localeCompare(a.targetStartDate || ''));
-
-      const upcomingCountEl = document.getElementById('saved-upcoming-count');
-      if (upcomingCountEl) upcomingCountEl.textContent = upcomingWeeks.length;
-
-      upcomingListEl.innerHTML = upcomingWeeks.length > 0
-        ? upcomingWeeks.map(snap => renderCollapsibleWeekDropdownHTML(snap, allUpcomingWeeksExpanded)).join('')
-        : `<div class="text-center py-8 px-4 rounded-xl app-subcard text-xs opacity-65">
-             No upcoming weeks saved yet. Click any future payday on the calendar to plan an upcoming week.
-           </div>`;
-
-      // Earlier Saved Weeks section (collapsed dropdowns)
-      const pastWrapperEl = document.getElementById('saved-past-weeks-wrapper');
-      const pastListEl = document.getElementById('saved-past-weeks-list');
-      const pastCountEl = document.getElementById('saved-past-count');
-      if (pastWrapperEl && pastListEl) {
-        if (pastWeeks.length > 0) {
-          pastWrapperEl.classList.remove('hidden');
-          if (pastCountEl) pastCountEl.textContent = pastWeeks.length;
-          pastListEl.innerHTML = pastWeeks.map(snap => renderCollapsibleWeekDropdownHTML(snap, false)).join('');
-        } else {
-          pastWrapperEl.classList.add('hidden');
-        }
-      }
-
-      if (window.lucide) lucide.createIcons();
-    }
-
-    function toggleBankCardAccordion(headerEl) {
-      const card = headerEl.closest('.rounded-xl');
-      if (!card) return;
-      const content = card.querySelector('.bank-accordion');
-      const chevron = card.querySelector('.bank-chevron');
-      if (content) content.classList.toggle('open');
-      if (chevron) chevron.classList.toggle('rotate-180');
-    }
-
-    function toggleCurrentWeekBankCards() {
-      currentWeekBanksExpanded = !currentWeekBanksExpanded;
-      const btn = document.getElementById('toggle-current-banks-btn');
-      if (btn) btn.textContent = currentWeekBanksExpanded ? 'Collapse All' : 'Expand All';
-      const container = document.getElementById('saved-current-bank-cards');
-      if (!container) return;
-      container.querySelectorAll('.bank-accordion').forEach(el => {
-        el.classList.toggle('open', currentWeekBanksExpanded);
-      });
-      container.querySelectorAll('.bank-chevron').forEach(el => {
-        el.classList.toggle('rotate-180', currentWeekBanksExpanded);
-      });
-    }
-
-    function toggleSavedWeekDropdown(snapId) {
-      const body = document.getElementById(`week-drop-body-${snapId}`);
-      const chev = document.getElementById(`week-drop-chev-${snapId}`);
-      if (!body) return;
-      body.classList.toggle('open');
-      if (chev) chev.classList.toggle('rotate-180');
-    }
-
-    function toggleAllUpcomingWeeks() {
-      allUpcomingWeeksExpanded = !allUpcomingWeeksExpanded;
-      const btn = document.getElementById('toggle-upcoming-weeks-btn');
-      if (btn) btn.textContent = allUpcomingWeeksExpanded ? 'Collapse All' : 'Expand All';
-      const list = document.getElementById('saved-upcoming-weeks-list');
-      if (!list) return;
-      list.querySelectorAll('.upcoming-week-accordion').forEach(el => {
-        el.classList.toggle('open', allUpcomingWeeksExpanded);
-      });
-      list.querySelectorAll('.upcoming-week-chevron').forEach(el => {
-        el.classList.toggle('rotate-180', allUpcomingWeeksExpanded);
-      });
-    }
-
-    function toggleBankTransferCheck(snapId, bankName) {
-      if (!appState.transferredChecklist) appState.transferredChecklist = {};
-      const key = `${snapId}_${bankName}`;
-      appState.transferredChecklist[key] = !appState.transferredChecklist[key];
-      renderSavedPage();
-      recordAccountActivity('Saved', `${appState.transferredChecklist[key] ? 'Checked' : 'Unchecked'} transfer for ${bankName}`, true);
-    }
-
-    function loadSavedWeekById(snapId) {
-      const snap = (appState.savedAllocations || []).find(s => s.id === snapId);
-      if (!snap) return;
-      applySnapshotToAllocation(snap, false);
-      navigateTo('allocation');
-      refreshAllUI(true);
-      showToast(`Loaded ${snap.weekBadge} into Allocation!`);
-    }
-
-    function getBankOptionsHTML(selectedBank) {
-      const banks = appState.banks || DEFAULT_BANKS;
-      return banks.map(b => {
-        const isSel = (b.name || '').toLowerCase() === (selectedBank || '').toLowerCase();
-        return `<option value="${b.name}" ${isSel ? 'selected' : ''}>${b.name}</option>`;
-      }).join('');
-    }
-
-    function syncLockedExpensesAcrossAllWeeks() {
-      syncSetupChangesAcrossAllWeeks();
     }
 
     // ==================== PAGE 3: SAVED & PAGE 4: PREVIOUS OLD WEEKS ====================
@@ -3775,7 +3622,6 @@ service cloud.firestore {
       const setupVarList = appState.variableCategories || [];
       const latestDebtBank = appState.debtBank || snap.debtBank || 'ShopeePay';
 
-      // 1. Recurring Fixed Items (always resolve bank dynamically from latest Setup)
       (snap.fixedItems || []).filter(it => it.enabled !== false).forEach(item => {
         const matchedSetup = setupFixedList.find(
           sf => sf.id === item.id || sf.name.toLowerCase() === (item.name || '').toLowerCase()
@@ -3789,7 +3635,6 @@ service cloud.firestore {
         });
       });
 
-      // 2. Priority #1 Debts (always resolve to latest Debt Bank from Setup)
       if (!bankMap[latestDebtBank]) bankMap[latestDebtBank] = [];
       if (Number(snap.spaylaterWeekly) > 0) {
         bankMap[latestDebtBank].push({ label: 'SPaylater (Priority #1)', amount: Number(snap.spaylaterWeekly) || 0 });
@@ -3798,7 +3643,6 @@ service cloud.firestore {
         bankMap[latestDebtBank].push({ label: 'SLoan (Priority #1)', amount: Number(snap.sloanWeekly) || 0 });
       }
 
-      // 3. Variable Breakdown (always resolve bank dynamically from latest Setup)
       (snap.variableBreakdown || []).forEach(v => {
         const matchedCat = setupVarList.find(
           vc => vc.id === v.id || vc.name.toLowerCase() === (v.name || '').toLowerCase()
@@ -3833,7 +3677,6 @@ service cloud.firestore {
         }
       });
 
-      // Sort banks from highest allocation to lowest allocation
       activeEntries.sort((a, b) => b.total - a.total);
 
       return {
@@ -3902,7 +3745,6 @@ service cloud.firestore {
 
       return `
         <div class="app-subcard rounded-2xl overflow-hidden border border-transparent hover:border-blue-500/35 transition">
-          <!-- Collapsed Week Dropdown Header -->
           <div onclick="toggleSavedWeekDropdown('${safeSnapId}')"
             class="p-3.5 flex items-center justify-between gap-3 cursor-pointer">
             <div class="flex items-center gap-2.5 min-w-0">
@@ -3923,19 +3765,25 @@ service cloud.firestore {
             </div>
           </div>
 
-          <!-- Expandable Week Dropdown Body -->
           <div id="week-drop-body-${snap.id}" class="${groupClass}-week-accordion accordion-content ${isExpanded ? 'open' : ''}">
             <div class="accordion-inner">
               <div class="px-3.5 pb-3.5 pt-2.5 border-t app-divider space-y-2.5">
-                <div class="flex items-center justify-between gap-2 text-[11px]">
+                <div class="flex flex-wrap items-center justify-between gap-2 text-[11px]">
                   <span style="color: var(--text-secondary)">
                     Target Range: <strong>${snap.targetRange || snap.weekBadge}</strong>
                   </span>
-                  <button type="button" onclick="event.stopPropagation(); loadSavedWeekById('${safeSnapId}')"
-                    class="px-2.5 py-1 rounded-lg bg-blue-600/15 hover:bg-blue-600/25 text-blue-400 border border-blue-500/30 text-[11px] font-semibold transition flex items-center gap-1">
-                    <i data-lucide="arrow-up-right" class="w-3 h-3"></i>
-                    <span>Load in Allocation</span>
-                  </button>
+                  <div class="flex items-center gap-1.5">
+                    <button type="button" onclick="event.stopPropagation(); loadSavedWeekById('${safeSnapId}')"
+                      class="px-2.5 py-1 rounded-lg bg-blue-600/15 hover:bg-blue-600/25 text-blue-400 border border-blue-500/30 text-[11px] font-semibold transition flex items-center gap-1 cursor-pointer">
+                      <i data-lucide="arrow-up-right" class="w-3 h-3"></i>
+                      <span>Load</span>
+                    </button>
+                    <button type="button" onclick="event.stopPropagation(); removeAllocationById('${safeSnapId}')"
+                      class="px-2.5 py-1 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 text-rose-400 border border-rose-500/30 text-[11px] font-semibold transition flex items-center gap-1 cursor-pointer">
+                      <i data-lucide="trash-2" class="w-3 h-3"></i>
+                      <span>Remove</span>
+                    </button>
+                  </div>
                 </div>
 
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -3962,33 +3810,33 @@ service cloud.firestore {
       const upcomingListEl = document.getElementById('saved-upcoming-weeks-list');
       if (!currentCardsEl || !upcomingListEl) return;
 
-      if (appState.savedAllocations.length === 0) {
-        autoSaveCurrentWeek(true);
-      }
+      const allSaved = Array.isArray(appState.savedAllocations) ? appState.savedAllocations : [];
+      const activeAndUpcoming = allSaved
+        .filter(s => !isWeekFinished(s))
+        .sort((a, b) => (a.targetStartDate || '').localeCompare(b.targetStartDate || ''));
 
-      const activeWeekId = `${appState.targetStartDate}_${appState.targetEndDate}`;
-      let currentSnap = appState.savedAllocations.find(s => s.id === activeWeekId);
-      if (!currentSnap) {
-        autoSaveCurrentWeek(true);
-        currentSnap = appState.savedAllocations.find(s => s.id === activeWeekId) || appState.savedAllocations[0];
-      }
+      const activeWeekId = getActiveTargetWeekId();
+      const currentSnap = activeAndUpcoming.find(s => s.id === activeWeekId) || activeAndUpcoming[0] || null;
+      activeSavedCurrentSnapId = currentSnap ? currentSnap.id : null;
 
-      // Render Left Panel: Current Week (2 Columns, High to Low, Zero-Allocation Banks Collapsed at Bottom)
+      const badgeEl = document.getElementById('saved-current-week-badge');
+      const rangeEl = document.getElementById('saved-current-week-range');
+      const totalEl = document.getElementById('saved-current-grand-total');
+      const removeBtnEl = document.getElementById('saved-current-remove-btn');
+      const zeroWrapper = document.getElementById('saved-current-zero-banks-wrapper');
+
       if (currentSnap) {
-        const badgeEl = document.getElementById('saved-current-week-badge');
-        const rangeEl = document.getElementById('saved-current-week-range');
-        const totalEl = document.getElementById('saved-current-grand-total');
         if (badgeEl) badgeEl.textContent = currentSnap.weekBadge;
         if (rangeEl) rangeEl.textContent = currentSnap.targetRange || formatFullRange(currentSnap.targetStartDate, currentSnap.targetEndDate);
+        if (removeBtnEl) removeBtnEl.classList.remove('hidden');
 
         const { entries, zeroBanks, grandTotal } = buildBankBreakdownForSnapshot(currentSnap);
         if (totalEl) totalEl.textContent = formatPHP(grandTotal);
 
         currentCardsEl.innerHTML = entries.length > 0
           ? entries.map(({ bankName, items }) => renderBankCardItemHTML(currentSnap.id, bankName, items, true)).join('')
-          : `<div class="md:col-span-2 text-center py-8 text-xs opacity-60">No allocations recorded for the current week yet.</div>`;
+          : `<div class="md:col-span-2 text-center py-8 text-xs opacity-60">No non-zero allocations recorded for this week.</div>`;
 
-        const zeroWrapper = document.getElementById('saved-current-zero-banks-wrapper');
         const zeroCountEl = document.getElementById('saved-current-zero-count');
         const zeroListEl = document.getElementById('saved-current-zero-list');
         if (zeroWrapper && zeroListEl) {
@@ -4004,13 +3852,25 @@ service cloud.firestore {
             zeroWrapper.classList.add('hidden');
           }
         }
+      } else {
+        if (badgeEl) badgeEl.textContent = 'None Saved';
+        if (rangeEl) rangeEl.textContent = 'Save an allocation from the Allocation tab to view it here';
+        if (totalEl) totalEl.textContent = '₱0.00';
+        if (removeBtnEl) removeBtnEl.classList.add('hidden');
+        if (zeroWrapper) zeroWrapper.classList.add('hidden');
+        currentCardsEl.innerHTML = `
+          <div class="md:col-span-2 text-center py-10 px-4 rounded-xl app-subcard space-y-2">
+            <div class="text-xs font-bold">No Saved Allocations Yet</div>
+            <p class="text-[11px] max-w-sm mx-auto" style="color: var(--text-secondary)">
+              Go to the <strong>Allocation</strong> page, set your income and target week, and click <strong>Save Allocation</strong>.
+            </p>
+          </div>
+        `;
       }
 
-      // Right Panel: Upcoming Weeks ONLY (finished weeks go to Previous Old Weeks page)
-      const curStart = currentSnap?.targetStartDate || appState.targetStartDate;
-      const upcomingWeeks = appState.savedAllocations
-        .filter(s => s.id !== currentSnap?.id && !isWeekFinished(s) && (s.targetStartDate || '') >= curStart)
-        .sort((a, b) => (a.targetStartDate || '').localeCompare(b.targetStartDate || ''));
+      const upcomingWeeks = currentSnap
+        ? activeAndUpcoming.filter(s => s.id !== currentSnap.id)
+        : [];
 
       const upcomingCountEl = document.getElementById('saved-upcoming-count');
       if (upcomingCountEl) upcomingCountEl.textContent = upcomingWeeks.length;
@@ -4018,11 +3878,34 @@ service cloud.firestore {
       upcomingListEl.innerHTML = upcomingWeeks.length > 0
         ? upcomingWeeks.map(snap => renderCollapsibleWeekDropdownHTML(snap, allUpcomingWeeksExpanded, 'upcoming')).join('')
         : `<div class="text-center py-8 px-4 rounded-xl app-subcard text-xs opacity-65">
-             No upcoming weeks saved yet. Click or drag future dates on the calendar to plan ahead.
+             No additional upcoming weeks saved yet. Select future dates on the calendar and click <strong>Save Allocation</strong>.
            </div>`;
 
       renderOldWeeksPage();
       if (window.lucide) lucide.createIcons();
+    }
+
+    function toggleBankCardAccordion(headerEl) {
+      const card = headerEl.closest('.rounded-xl');
+      if (!card) return;
+      const content = card.querySelector('.bank-accordion');
+      const chevron = card.querySelector('.bank-chevron');
+      if (content) content.classList.toggle('open');
+      if (chevron) chevron.classList.toggle('rotate-180');
+    }
+
+    function toggleCurrentWeekBankCards() {
+      currentWeekBanksExpanded = !currentWeekBanksExpanded;
+      const btn = document.getElementById('toggle-current-banks-btn');
+      if (btn) btn.textContent = currentWeekBanksExpanded ? 'Collapse All' : 'Expand All';
+      const container = document.getElementById('saved-current-bank-cards');
+      if (!container) return;
+      container.querySelectorAll('.bank-accordion').forEach(el => {
+        el.classList.toggle('open', currentWeekBanksExpanded);
+      });
+      container.querySelectorAll('.bank-chevron').forEach(el => {
+        el.classList.toggle('rotate-180', currentWeekBanksExpanded);
+      });
     }
 
     function toggleCurrentZeroBanksAccordion() {
@@ -4031,6 +3914,45 @@ service cloud.firestore {
       if (!body) return;
       body.classList.toggle('open');
       if (chev) chev.classList.toggle('rotate-180');
+    }
+
+    function toggleSavedWeekDropdown(snapId) {
+      const body = document.getElementById(`week-drop-body-${snapId}`);
+      const chev = document.getElementById(`week-drop-chev-${snapId}`);
+      if (!body) return;
+      body.classList.toggle('open');
+      if (chev) chev.classList.toggle('rotate-180');
+    }
+
+    function toggleAllUpcomingWeeks() {
+      allUpcomingWeeksExpanded = !allUpcomingWeeksExpanded;
+      const btn = document.getElementById('toggle-upcoming-weeks-btn');
+      if (btn) btn.textContent = allUpcomingWeeksExpanded ? 'Collapse All' : 'Expand All';
+      const list = document.getElementById('saved-upcoming-weeks-list');
+      if (!list) return;
+      list.querySelectorAll('.upcoming-week-accordion').forEach(el => {
+        el.classList.toggle('open', allUpcomingWeeksExpanded);
+      });
+      list.querySelectorAll('.upcoming-week-chevron').forEach(el => {
+        el.classList.toggle('rotate-180', allUpcomingWeeksExpanded);
+      });
+    }
+
+    function toggleBankTransferCheck(snapId, bankName) {
+      if (!appState.transferredChecklist) appState.transferredChecklist = {};
+      const key = `${snapId}_${bankName}`;
+      appState.transferredChecklist[key] = !appState.transferredChecklist[key];
+      renderSavedPage();
+      recordAccountActivity('Saved', `${appState.transferredChecklist[key] ? 'Checked' : 'Unchecked'} transfer for ${bankName}`, true);
+    }
+
+    function loadSavedWeekById(snapId) {
+      const snap = (appState.savedAllocations || []).find(s => s.id === snapId);
+      if (!snap) return;
+      applySnapshotToAllocation(snap, false);
+      navigateTo('allocation');
+      refreshAllUI(true);
+      showToast(`Loaded ${snap.weekBadge} into Allocation!`);
     }
 
     function renderOldWeeksPage() {
@@ -4059,7 +3981,7 @@ service cloud.firestore {
              </div>
              <div class="text-sm font-bold">No Previous Old Weeks Yet</div>
              <p class="text-xs max-w-md mx-auto" style="color: var(--text-secondary)">
-               Once a budget week finishes (past its Sunday end date), it automatically moves here from your Saved &amp; Allocation views.
+               Saved budget weeks automatically appear here once their Sunday end date passes.
              </p>
            </div>`;
 
@@ -4080,6 +4002,15 @@ service cloud.firestore {
       });
     }
 
+    // ==================== PAGE 5: SETUP HELPERS ====================
+    function getBankOptionsHTML(selectedBank) {
+      const banks = appState.banks || DEFAULT_BANKS;
+      return banks.map(b => {
+        const isSel = (b.name || '').toLowerCase() === (selectedBank || '').toLowerCase();
+        return `<option value="${b.name}" ${isSel ? 'selected' : ''}>${b.name}</option>`;
+      }).join('');
+    }
+
     function syncSetupChangesAcrossAllWeeks(changedItemId = null, changedField = null) {
       if (!Array.isArray(appState.savedAllocations)) return;
 
@@ -4090,7 +4021,6 @@ service cloud.firestore {
       appState.savedAllocations.forEach(snap => {
         snap.debtBank = latestDebtBank;
 
-        // Reconcile each saved week's fixedItems with the updated Setup fixedItems
         const existingFixed = Array.isArray(snap.fixedItems) ? snap.fixedItems : [];
         snap.fixedItems = latestFixed.map(setupItem => {
           const prev = existingFixed.find(
@@ -4121,7 +4051,6 @@ service cloud.firestore {
           return JSON.parse(JSON.stringify(setupItem));
         });
 
-        // Recompute that week's fixed total & variable breakdown using updated banks & percentages
         const recurringFixedTotal = snap.fixedItems
           .filter(it => it.enabled !== false)
           .reduce((s, it) => s + (Number(it.weeklyAmount) || 0), 0);
@@ -4145,13 +4074,12 @@ service cloud.firestore {
     function updateDebtBank(bankName) {
       appState.debtBank = bankName;
       syncLockedDebtsToAllocation(false);
-      autoSaveCurrentWeek(true);
       syncSetupChangesAcrossAllWeeks();
       renderSavedPage();
       renderSetupPage();
       persistUserData(true);
-      recordAccountActivity('Setup', `Assigned Priority #1 debts to ${bankName} across all weeks`, true);
-      showToast(`Debt settlement wallet updated to ${bankName} across all weeks`);
+      recordAccountActivity('Setup', `Assigned Priority #1 debts to ${bankName}`, true);
+      showToast(`Debt settlement wallet updated to ${bankName}`);
     }
 
     function handleAddBank(e) {
@@ -4186,12 +4114,11 @@ service cloud.firestore {
       syncLockedDebtsToAllocation(false);
       renderFixedExpensesList();
       recalculateBudget();
-      autoSaveCurrentWeek(true);
       syncSetupChangesAcrossAllWeeks();
       renderSavedPage();
       renderSetupPage();
       persistUserData(true);
-      recordAccountActivity('Setup', `Removed bank ${bankName} (reassigned to ${fallback} across all weeks)`, true);
+      recordAccountActivity('Setup', `Removed bank ${bankName} (reassigned to ${fallback})`, true);
       showToast(`Removed ${bankName} & reassigned items to ${fallback}`);
     }
 
@@ -4219,13 +4146,12 @@ service cloud.firestore {
 
       renderFixedExpensesList();
       recalculateBudget();
-      autoSaveCurrentWeek(true);
       syncSetupChangesAcrossAllWeeks();
       renderSavedPage();
       renderSetupPage();
       persistUserData(true);
       recordAccountActivity('Setup', `Added fixed expense: ${name} (${formatPHP(amt)}/wk → ${bank})`, true);
-      showToast(`Added fixed expense: ${name} & synced all weeks`);
+      showToast(`Added fixed expense: ${name}`);
     }
 
     function updateSetupFixedField(id, field, val) {
@@ -4244,13 +4170,12 @@ service cloud.firestore {
 
       renderFixedExpensesList();
       recalculateBudget();
-      autoSaveCurrentWeek(true);
       syncSetupChangesAcrossAllWeeks(id, field);
       renderSavedPage();
       renderSetupPage();
       persistUserData(true);
-      recordAccountActivity('Setup', `Updated fixed expense ${item.name} (${field}) across all weeks`, true);
-      showToast(`Synced ${item.name} across all weeks`);
+      recordAccountActivity('Setup', `Updated fixed expense ${item.name} (${field})`, true);
+      showToast(`Updated ${item.name}`);
     }
 
     function deleteSetupFixed(id) {
@@ -4258,13 +4183,12 @@ service cloud.firestore {
       appState.fixedItems = appState.fixedItems.filter(f => f.id !== id);
       renderFixedExpensesList();
       recalculateBudget();
-      autoSaveCurrentWeek(true);
       syncSetupChangesAcrossAllWeeks();
       renderSavedPage();
       renderSetupPage();
       persistUserData(true);
       if (removed) recordAccountActivity('Setup', `Deleted fixed expense: ${removed.name}`, true);
-      showToast('Fixed expense removed across all weeks.');
+      showToast('Fixed expense removed.');
     }
 
     function handleAddVariableSetup(e) {
@@ -4291,13 +4215,12 @@ service cloud.firestore {
       document.getElementById('setup-var-pct').value = '';
 
       recalculateBudget();
-      autoSaveCurrentWeek(true);
       syncSetupChangesAcrossAllWeeks();
       renderSavedPage();
       renderSetupPage();
       persistUserData(true);
       recordAccountActivity('Setup', `Added variable category: ${name} (${pct}% → ${bank})`, true);
-      showToast(`Added variable category: ${name} & synced all weeks`);
+      showToast(`Added variable category: ${name}`);
     }
 
     function updateSetupVariableField(id, field, val) {
@@ -4311,13 +4234,12 @@ service cloud.firestore {
       }
 
       recalculateBudget();
-      autoSaveCurrentWeek(true);
       syncSetupChangesAcrossAllWeeks();
       renderSavedPage();
       renderSetupPage();
       persistUserData(true);
-      recordAccountActivity('Setup', `Updated variable category ${cat.name} (${field}) across all weeks`, true);
-      showToast(`Synced ${cat.name} across all weeks`);
+      recordAccountActivity('Setup', `Updated variable category ${cat.name} (${field})`, true);
+      showToast(`Updated ${cat.name}`);
     }
 
     function autoBalanceVariablePercentages() {
@@ -4342,13 +4264,12 @@ service cloud.firestore {
         });
       }
       recalculateBudget();
-      autoSaveCurrentWeek(true);
       syncSetupChangesAcrossAllWeeks();
       renderSavedPage();
       renderSetupPage();
       persistUserData(true);
-      recordAccountActivity('Setup', 'Auto-balanced variable percentages to 100% across all weeks', true);
-      showToast('Variable percentages balanced to 100% across all weeks!');
+      recordAccountActivity('Setup', 'Auto-balanced variable percentages to 100%', true);
+      showToast('Variable percentages balanced to 100%!');
     }
 
     function deleteSetupVariable(id) {
@@ -4359,13 +4280,12 @@ service cloud.firestore {
       const removed = appState.variableCategories.find(c => c.id === id);
       appState.variableCategories = appState.variableCategories.filter(c => c.id !== id);
       recalculateBudget();
-      autoSaveCurrentWeek(true);
       syncSetupChangesAcrossAllWeeks();
       renderSavedPage();
       renderSetupPage();
       persistUserData(true);
       if (removed) recordAccountActivity('Setup', `Deleted variable category: ${removed.name}`, true);
-      showToast('Variable category removed across all weeks.');
+      showToast('Variable category removed.');
     }
 
     function renderSetupPage() {
@@ -4539,6 +4459,7 @@ service cloud.firestore {
 
       renderIncomePresetButtons();
       renderSavedWeeksQuickBar();
+      updateAllocationSaveControlsUI();
       updateCalendarLabels();
       renderCalendar();
       renderFixedExpensesList();
