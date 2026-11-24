@@ -5,6 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
   <title>Von Allocator — Budget Allocation for Vhon</title>
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%232563eb'/%3E%3Ctext x='50%25' y='54%25' dominant-baseline='middle' text-anchor='middle' font-family='Montserrat,Arial,sans-serif' font-weight='800' font-size='36' fill='white'%3EV%3C/text%3E%3C/svg%3E" />
+  <meta name="theme-color" content="#0b0f17" id="meta-theme-color" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Von Allocator" />
+  <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='112' fill='%232563eb'/%3E%3Ctext x='50%25' y='54%25' dominant-baseline='middle' text-anchor='middle' font-family='Montserrat,Arial,sans-serif' font-weight='800' font-size='280' fill='white'%3EV%3C/text%3E%3C/svg%3E" />
+  <link id="pwa-manifest-link" rel="manifest" href="" />
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/lucide@latest"></script>
   <!-- QRPh EMVCo Scanner & Dynamic QR Code Generator -->
@@ -566,6 +573,12 @@
 
       <!-- Bottom Realtime Cloud Sync & User Controls -->
       <div class="p-2.5 border-t app-divider space-y-1.5">
+        <button type="button" onclick="openAppPackagerModal('install')" title="Install Mobile App (APK) & Desktop Version"
+          class="sidebar-footer-btn w-full flex items-center justify-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold text-blue-400 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/25 transition cursor-pointer">
+          <i data-lucide="smartphone" class="w-4 h-4 shrink-0"></i>
+          <span class="sidebar-label hidden whitespace-nowrap">Get Mobile / Desktop</span>
+        </button>
+
         <button type="button" onclick="manualCloudSync()" title="Permanent Firebase Cloud Sync — Click to Force Sync Now"
           class="sidebar-footer-btn w-full flex items-center justify-center gap-3 px-3 py-2 rounded-xl text-xs font-medium opacity-90 hover:opacity-100 hover:bg-slate-500/10 transition cursor-pointer">
           <span id="fb-status-dot" class="w-2 h-2 rounded-full bg-amber-400 shrink-0"></span>
@@ -699,6 +712,12 @@
           </div>
 
           <!-- Light / Dark Mode Toggle on Top Right -->
+          <button type="button" onclick="openAppPackagerModal('install')" title="Install Mobile APK or Desktop App"
+            class="p-2 rounded-full app-subcard hover:border-blue-500/50 text-blue-400 transition flex items-center gap-1.5 text-xs font-semibold whitespace-nowrap shrink-0 cursor-pointer">
+            <i data-lucide="download" class="w-4 h-4 shrink-0"></i>
+            <span class="hidden sm:inline pr-1">Get App</span>
+          </button>
+
           <button type="button" onclick="toggleTheme()" title="Switch Light / Dark Mode"
             class="p-2 rounded-full app-subcard hover:border-blue-500/50 transition flex items-center gap-1.5 text-xs font-semibold whitespace-nowrap shrink-0 cursor-pointer">
             <i id="header-theme-icon" data-lucide="sun" class="w-4 h-4 text-amber-400 shrink-0"></i>
@@ -1902,6 +1921,20 @@
           </button>
         </div>
 
+        <button type="button" onclick="closeMobileMoreDrawer(); openAppPackagerModal('install');"
+          class="w-full p-3.5 rounded-2xl bg-gradient-to-r from-blue-600/20 to-indigo-600/20 border border-blue-500/35 flex items-center justify-between gap-3 text-left transition cursor-pointer">
+          <div class="flex items-center gap-3 min-w-0">
+            <div class="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0">
+              <i data-lucide="smartphone" class="w-4 h-4"></i>
+            </div>
+            <div class="min-w-0">
+              <div class="text-xs font-bold text-blue-300 truncate">Install Mobile App (APK) &amp; Desktop</div>
+              <div class="text-[10px] truncate" style="color: var(--text-secondary)">Add to Home Screen or export APK / .exe</div>
+            </div>
+          </div>
+          <i data-lucide="chevron-right" class="w-4 h-4 text-blue-400 shrink-0"></i>
+        </button>
+
         <div class="grid grid-cols-2 gap-2.5 pt-1">
           <button type="button" onclick="closeMobileMoreDrawer(); manualCloudSync();"
             class="py-3 px-3 rounded-xl app-subcard text-xs font-semibold flex items-center justify-center gap-1.5 text-emerald-400 cursor-pointer">
@@ -2198,6 +2231,181 @@
             View Old Weeks
           </button>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== MOBILE APK & DESKTOP APP PACKAGER MODAL ==================== -->
+  <div id="app-packager-modal" class="hidden fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="app-card rounded-t-3xl sm:rounded-3xl max-w-lg w-full shadow-2xl border border-blue-500/30 overflow-hidden flex flex-col max-h-[92dvh]">
+      <!-- Modal Header -->
+      <div class="px-5 py-4 border-b app-divider flex items-center justify-between gap-2 shrink-0">
+        <div class="flex items-center gap-2.5 min-w-0">
+          <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white flex items-center justify-center shadow-sm shrink-0">
+            <i data-lucide="package" class="w-5 h-5"></i>
+          </div>
+          <div class="min-w-0">
+            <div class="flex items-center gap-2">
+              <h3 class="text-sm font-extrabold tracking-tight truncate">Mobile App (APK) &amp; Desktop</h3>
+              <span id="app-standalone-badge" class="hidden px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 text-[10px] font-bold">
+                Installed App
+              </span>
+            </div>
+            <p class="text-[11px] truncate" style="color: var(--text-secondary)">
+              Run natively on Android, iOS, Windows &amp; macOS with live Firebase sync
+            </p>
+          </div>
+        </div>
+        <button type="button" onclick="closeAppPackagerModal()"
+          class="p-2 rounded-xl hover:bg-slate-500/15 text-slate-400 hover:text-rose-400 transition cursor-pointer shrink-0">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <!-- Platform Tabs -->
+      <div class="grid grid-cols-3 border-b app-divider shrink-0">
+        <button type="button" id="pkg-tab-install" onclick="switchAppPackagerTab('install')"
+          class="py-3 text-xs font-bold border-b-2 border-blue-500 text-blue-400 flex items-center justify-center gap-1.5 transition cursor-pointer">
+          <i data-lucide="zap" class="w-3.5 h-3.5"></i>
+          <span>1-Click App</span>
+        </button>
+        <button type="button" id="pkg-tab-apk" onclick="switchAppPackagerTab('apk')"
+          class="py-3 text-xs font-bold border-b-2 border-transparent opacity-65 hover:opacity-100 flex items-center justify-center gap-1.5 transition cursor-pointer">
+          <i data-lucide="smartphone" class="w-3.5 h-3.5"></i>
+          <span>Android .APK</span>
+        </button>
+        <button type="button" id="pkg-tab-desktop" onclick="switchAppPackagerTab('desktop')"
+          class="py-3 text-xs font-bold border-b-2 border-transparent opacity-65 hover:opacity-100 flex items-center justify-center gap-1.5 transition cursor-pointer">
+          <i data-lucide="monitor" class="w-3.5 h-3.5"></i>
+          <span>Desktop .EXE</span>
+        </button>
+      </div>
+
+      <!-- Scrollable Body -->
+      <div class="p-4 sm:p-5 overflow-y-auto space-y-4 pb-safe">
+
+        <!-- TAB 1: INSTANT NATIVE APP INSTALL -->
+        <div id="pkg-view-install" class="space-y-3.5">
+          <div class="p-4 rounded-2xl bg-gradient-to-br from-blue-600/15 to-indigo-600/10 border border-blue-500/30 space-y-3">
+            <div class="flex items-start gap-3">
+              <div class="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center font-extrabold text-base shrink-0">
+                V
+              </div>
+              <div class="min-w-0">
+                <h4 class="text-xs font-extrabold">Instant Native App (Zero Build Required)</h4>
+                <p class="text-[11px] mt-0.5 leading-relaxed" style="color: var(--text-secondary)">
+                  Android Chrome automatically packages PWAs as a native <strong>WebAPK</strong> in your app drawer, and Windows/Mac browsers install it as a standalone <strong>Desktop Window</strong> with no address bar.
+                </p>
+              </div>
+            </div>
+
+            <button type="button" id="pkg-native-install-btn" onclick="triggerNativePwaInstall()"
+              class="w-full py-3 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold shadow-md shadow-blue-600/25 transition flex items-center justify-center gap-2 cursor-pointer">
+              <i data-lucide="download-cloud" class="w-4 h-4"></i>
+              <span id="pkg-native-install-label">Install Von Allocator App Now</span>
+            </button>
+          </div>
+
+          <div class="space-y-2 text-xs">
+            <div class="p-3 rounded-xl app-subcard space-y-1">
+              <div class="font-bold text-emerald-400 flex items-center gap-1.5">
+                <i data-lucide="smartphone" class="w-3.5 h-3.5"></i>
+                <span>Android Phone (Chrome / Edge / Brave)</span>
+              </div>
+              <p class="text-[11px]" style="color: var(--text-secondary)">
+                Tap the browser menu (<strong>⋮</strong>) &rarr; <strong>Add to Home screen</strong> &rarr; <strong>Install</strong>. Android installs a real native WebAPK icon on your phone.
+              </p>
+            </div>
+
+            <div class="p-3 rounded-xl app-subcard space-y-1">
+              <div class="font-bold text-blue-400 flex items-center gap-1.5">
+                <i data-lucide="monitor" class="w-3.5 h-3.5"></i>
+                <span>Windows / Mac Desktop (Chrome / Edge)</span>
+              </div>
+              <p class="text-[11px]" style="color: var(--text-secondary)">
+                Click the <strong>Install icon</strong> on the right side of the URL bar (or menu &rarr; <strong>Save and share &rarr; Install page as app</strong>) to pin it to your Taskbar / Dock.
+              </p>
+            </div>
+
+            <div class="p-3 rounded-xl app-subcard space-y-1">
+              <div class="font-bold text-purple-400 flex items-center gap-1.5">
+                <i data-lucide="tablet" class="w-3.5 h-3.5"></i>
+                <span>iPhone / iPad (Safari)</span>
+              </div>
+              <p class="text-[11px]" style="color: var(--text-secondary)">
+                Tap the <strong>Share</strong> button &rarr; <strong>Add to Home Screen</strong> to launch full-screen like a native iOS app.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB 2: ANDROID .APK FILE BUILDER (CAPACITOR) -->
+        <div id="pkg-view-apk" class="hidden space-y-3.5">
+          <div class="p-3.5 rounded-2xl app-subcard space-y-2">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-extrabold text-emerald-400">Compile Standalone Android .APK (Capacitor)</span>
+              <span class="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-400 text-[10px] font-bold">Android 8–15</span>
+            </div>
+            <p class="text-[11px] leading-relaxed" style="color: var(--text-secondary)">
+              Save this HTML file inside a folder named <code class="px-1 py-0.5 rounded app-card text-blue-400">www/index.html</code>, download the config files below, and run these 4 commands to generate your installable <code class="px-1 py-0.5 rounded app-card text-emerald-400">app-debug.apk</code>:
+            </p>
+            <div class="p-2.5 rounded-xl app-input text-[11px] mono-num overflow-x-auto whitespace-pre select-all" id="capacitor-cli-snippet">npm install
+npx cap add android
+npx cap sync android
+cd android && ./gradlew assembleDebug</div>
+            <div class="flex items-center gap-2 pt-1">
+              <button type="button" onclick="copyTextToClipboard(document.getElementById('capacitor-cli-snippet').textContent, 'Copied Android APK build commands!')"
+                class="flex-1 py-2 px-3 rounded-xl app-card hover:border-blue-500/40 text-xs font-semibold flex items-center justify-center gap-1.5 transition cursor-pointer">
+                <i data-lucide="copy" class="w-3.5 h-3.5 text-blue-400"></i>
+                <span>Copy Commands</span>
+              </button>
+              <button type="button" onclick="downloadCapacitorFiles()"
+                class="flex-1 py-2 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center justify-center gap-1.5 transition cursor-pointer">
+                <i data-lucide="download" class="w-3.5 h-3.5"></i>
+                <span>Download Configs</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="p-3 rounded-xl app-subcard text-[11px] space-y-1" style="color: var(--text-secondary)">
+            <div class="font-bold text-amber-400">No Android Studio? Free Cloud APK Option:</div>
+            <p>Host <code class="text-blue-400">index.html</code> on GitHub Pages / Vercel / Netlify, paste the URL into <strong>PWABuilder.com</strong>, and download a signed Android <strong>.apk</strong> in 30 seconds.</p>
+          </div>
+        </div>
+
+        <!-- TAB 3: DESKTOP .EXE / .DMG BUILDER (ELECTRON) -->
+        <div id="pkg-view-desktop" class="hidden space-y-3.5">
+          <div class="p-3.5 rounded-2xl app-subcard space-y-2">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-extrabold text-blue-400">Build Desktop App (.EXE / .DMG / .AppImage)</span>
+              <span class="px-2 py-0.5 rounded bg-blue-500/15 text-blue-400 text-[10px] font-bold">Electron</span>
+            </div>
+            <p class="text-[11px] leading-relaxed" style="color: var(--text-secondary)">
+              Put <code class="px-1 py-0.5 rounded app-card text-blue-400">index.html</code> alongside the downloaded <code class="px-1 py-0.5 rounded app-card text-blue-400">electron-main.js</code> and <code class="px-1 py-0.5 rounded app-card text-blue-400">package.json</code>, then run:
+            </p>
+            <div class="p-2.5 rounded-xl app-input text-[11px] mono-num overflow-x-auto whitespace-pre select-all" id="electron-cli-snippet">npm install
+npm start
+# Build Windows .exe or macOS .dmg installer:
+npm run dist</div>
+            <div class="flex items-center gap-2 pt-1">
+              <button type="button" onclick="copyTextToClipboard(document.getElementById('electron-cli-snippet').textContent, 'Copied Desktop build commands!')"
+                class="flex-1 py-2 px-3 rounded-xl app-card hover:border-blue-500/40 text-xs font-semibold flex items-center justify-center gap-1.5 transition cursor-pointer">
+                <i data-lucide="copy" class="w-3.5 h-3.5 text-blue-400"></i>
+                <span>Copy Commands</span>
+              </button>
+              <button type="button" onclick="downloadElectronFiles()"
+                class="flex-1 py-2 px-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold flex items-center justify-center gap-1.5 transition cursor-pointer">
+                <i data-lucide="download" class="w-3.5 h-3.5"></i>
+                <span>Download Desktop Files</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="p-3 rounded-xl app-subcard text-[11px]" style="color: var(--text-secondary)">
+            Your Firebase Cloud account (<strong class="text-emerald-400">von</strong>) syncs automatically between your Android APK and Desktop executable in real time.
+          </div>
+        </div>
+
       </div>
     </div>
   </div>
@@ -3426,12 +3634,221 @@
       }
       if (headerLabel) headerLabel.textContent = isDark ? 'Light' : 'Dark';
 
+      const metaTheme = document.getElementById('meta-theme-color');
+      if (metaTheme) metaTheme.setAttribute('content', isDark ? '#0b0f17' : '#f4f6fa');
+
       if (window.lucide) lucide.createIcons();
     }
 
     function toggleTheme() {
       const isCurrentlyDark = document.documentElement.classList.contains('dark');
       applyTheme(isCurrentlyDark ? 'light' : 'dark');
+    }
+
+    // ==================== PWA, MOBILE APK & DESKTOP PACKAGER ====================
+    let deferredInstallPrompt = null;
+
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredInstallPrompt = e;
+      const lbl = document.getElementById('pkg-native-install-label');
+      if (lbl) lbl.textContent = 'Install Von Allocator App Now (1-Tap Ready)';
+    });
+
+    window.addEventListener('appinstalled', () => {
+      deferredInstallPrompt = null;
+      const badge = document.getElementById('app-standalone-badge');
+      if (badge) badge.classList.remove('hidden');
+      showToast('Von Allocator installed on your device!');
+    });
+
+    function initPwaAndNativePackager() {
+      try {
+        const svgIcon192 = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' rx='44' fill='%232563eb'/%3E%3Ctext x='50%25' y='54%25' dominant-baseline='middle' text-anchor='middle' font-family='Montserrat,Arial,sans-serif' font-weight='800' font-size='106' fill='white'%3EV%3C/text%3E%3C/svg%3E";
+        const svgIcon512 = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='112' fill='%232563eb'/%3E%3Ctext x='50%25' y='54%25' dominant-baseline='middle' text-anchor='middle' font-family='Montserrat,Arial,sans-serif' font-weight='800' font-size='280' fill='white'%3EV%3C/text%3E%3C/svg%3E";
+
+        const manifestObj = {
+          name: 'Von Allocator — Budget Allocation for Vhon',
+          short_name: 'Von Allocator',
+          description: 'Debt-first weekly budget allocator with QRPh transfers & live Firebase cloud sync.',
+          start_url: window.location.href,
+          display: 'standalone',
+          orientation: 'any',
+          background_color: '#0b0f17',
+          theme_color: '#2563eb',
+          icons: [
+            { src: svgIcon192, sizes: '192x192', type: 'image/svg+xml', purpose: 'any maskable' },
+            { src: svgIcon512, sizes: '512x512', type: 'image/svg+xml', purpose: 'any maskable' }
+          ]
+        };
+
+        const manifestBlob = new Blob([JSON.stringify(manifestObj)], { type: 'application/manifest+json' });
+        const manifestUrl = URL.createObjectURL(manifestBlob);
+        const linkEl = document.getElementById('pwa-manifest-link');
+        if (linkEl) linkEl.href = manifestUrl;
+
+        const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+        if (isStandalone) {
+          const badge = document.getElementById('app-standalone-badge');
+          if (badge) badge.classList.remove('hidden');
+        }
+      } catch (err) {
+        console.warn('PWA manifest setup skipped:', err);
+      }
+    }
+
+    function openAppPackagerModal(tab = 'install') {
+      const modal = document.getElementById('app-packager-modal');
+      if (!modal) return;
+      modal.classList.remove('hidden');
+      switchAppPackagerTab(tab);
+      if (window.lucide) lucide.createIcons();
+    }
+
+    function closeAppPackagerModal() {
+      const modal = document.getElementById('app-packager-modal');
+      if (modal) modal.classList.add('hidden');
+    }
+
+    function switchAppPackagerTab(tab) {
+      ['install', 'apk', 'desktop'].forEach(key => {
+        const btn = document.getElementById(`pkg-tab-${key}`);
+        const view = document.getElementById(`pkg-view-${key}`);
+        if (btn) {
+          btn.className = key === tab
+            ? 'py-3 text-xs font-bold border-b-2 border-blue-500 text-blue-400 flex items-center justify-center gap-1.5 transition cursor-pointer'
+            : 'py-3 text-xs font-bold border-b-2 border-transparent opacity-65 hover:opacity-100 flex items-center justify-center gap-1.5 transition cursor-pointer';
+        }
+        if (view) view.classList.toggle('hidden', key !== tab);
+      });
+      if (window.lucide) lucide.createIcons();
+    }
+
+    async function triggerNativePwaInstall() {
+      if (deferredInstallPrompt) {
+        deferredInstallPrompt.prompt();
+        const choice = await deferredInstallPrompt.userChoice;
+        if (choice && choice.outcome === 'accepted') {
+          showToast('Installing Von Allocator app...');
+          closeAppPackagerModal();
+        }
+        deferredInstallPrompt = null;
+      } else {
+        showToast('Open your browser menu (⋮ or Share) and tap "Install app" or "Add to Home screen"!');
+      }
+    }
+
+    function downloadTextFile(filename, content, mimeType = 'application/json') {
+      const blob = new Blob([content], { type: mimeType });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+
+    function downloadCapacitorFiles() {
+      const capConfig = {
+        appId: 'com.vhon.allocator',
+        appName: 'Von Allocator',
+        webDir: 'www',
+        server: {
+          androidScheme: 'https'
+        },
+        android: {
+          backgroundColor: '#0b0f17'
+        }
+      };
+
+      const capPkg = {
+        name: 'von-allocator-mobile',
+        version: '1.0.0',
+        description: 'Von Allocator Android APK Wrapper',
+        scripts: {
+          'cap:sync': 'npx cap sync android',
+          'cap:open': 'npx cap open android'
+        },
+        dependencies: {
+          '@capacitor/core': '^6.1.0',
+          '@capacitor/android': '^6.1.0'
+        },
+        devDependencies: {
+          '@capacitor/cli': '^6.1.0'
+        }
+      };
+
+      downloadTextFile('capacitor.config.json', JSON.stringify(capConfig, null, 2));
+      setTimeout(() => {
+        downloadTextFile('package.json', JSON.stringify(capPkg, null, 2));
+      }, 250);
+      showToast('Downloaded capacitor.config.json & package.json for Android APK!');
+    }
+
+    function downloadElectronFiles() {
+      const electronMain = `const { app, BrowserWindow } = require('electron');
+const path = require('path');
+
+function createWindow() {
+  const win = new BrowserWindow({
+    width: 1280,
+    height: 840,
+    minWidth: 380,
+    minHeight: 640,
+    title: 'Von Allocator — Budget Allocation for Vhon',
+    backgroundColor: '#0b0f17',
+    autoHideMenuBar: true,
+    webPreferences: {
+      contextIsolation: true,
+      nodeIntegration: false
+    }
+  });
+
+  win.loadFile(path.join(__dirname, 'index.html'));
+}
+
+app.whenReady().then(() => {
+  createWindow();
+  app.on('activate', () => {
+    if (BrowserWindow.getAllWindows().length === 0) createWindow();
+  });
+});
+
+app.on('window-all-closed', () => {
+  if (process.platform !== 'darwin') app.quit();
+});
+`;
+
+      const electronPkg = {
+        name: 'von-allocator-desktop',
+        version: '1.0.0',
+        description: 'Von Allocator Desktop Application',
+        main: 'electron-main.js',
+        scripts: {
+          start: 'electron .',
+          dist: 'electron-builder'
+        },
+        build: {
+          appId: 'com.vhon.allocator.desktop',
+          productName: 'Von Allocator',
+          files: ['index.html', 'electron-main.js'],
+          win: { target: 'nsis' },
+          mac: { target: 'dmg' },
+          linux: { target: 'AppImage' }
+        },
+        devDependencies: {
+          electron: '^32.0.0',
+          'electron-builder': '^25.0.0'
+        }
+      };
+
+      downloadTextFile('electron-main.js', electronMain, 'application/javascript');
+      setTimeout(() => {
+        downloadTextFile('package.json', JSON.stringify(electronPkg, null, 2));
+      }, 250);
+      showToast('Downloaded electron-main.js & package.json for Desktop .EXE / .DMG!');
     }
 
     // ==================== AUTHENTICATION & CROSS-DEVICE SYNC ====================
@@ -7267,6 +7684,7 @@
     window.addEventListener('DOMContentLoaded', async () => {
       const savedTheme = getCookie(COOKIE_THEME_KEY) || 'dark';
       applyTheme(savedTheme);
+      initPwaAndNativePackager();
 
       await initRealtimeFirebase();
 
